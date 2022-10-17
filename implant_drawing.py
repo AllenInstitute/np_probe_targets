@@ -1,19 +1,579 @@
+"""Models for Neuropixels probe insertion info (providing suggested targets,
+recording actual insertions, storing notes) and properties of an implanted plastic
+skull-replacement with holes that provide access for probes to enter the brain (CAD
+diagram, hole positions, hole labels). Views are provided for displaying probe
+configurations relative to an implant template, with controllers that impose physical
+rules (e.g. two probes can't occupy one hole in an implant). 
+
+Overview of classes
+- a Probe has a letter and other info
+- a ProbeGroup has Probes for a given experiment
+- ImplantHoles is a layout of holes for Probes on a specific implant
+- a Drawing has data and methods for rendering ImplantHoles and Probes on a drawing of
+an implant
+
+"""
+
+import collections
 import datetime
 import json
 import pathlib
-from typing import Dict, List
+from dataclasses import dataclass
+import sys
+from typing import Dict, List, Literal, Mapping, Optional, Sequence, Tuple
 
 import IPython
+import ipywidgets as ipw
 
+COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 0
+"Keep a tally of weeks with no DR experiments: increment as needed"
 
+DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/implants/insertion_records"
+)
+"Directory for storing insertion records."
+
+class ImplantHoles:
+    "Establishes the labels of available holes for an implant."
+    hole_labels:Tuple
+    "Original labels for each hole: e.g. A1, A2, A3, B1, B2, B3, B4, etc."
+
+class TS5(ImplantHoles):
+    "First production DR implant, known as DR1, TS-5, or 2002."
+    probe_hole_idx = {
+        'A':[1,2,3],
+        'B':[1,2,3,4],
+        'C':[1,2,3,4],
+        'D':[1,2,3],
+        'E':[1,2,3,4],
+        'F':[1,2,3],
+    }
+    "1-indexed hole indices available for each probe."
+    hole_labels:Tuple[str,...] = tuple(f"{probe}{index}" for probe,indices in probe_hole_idx.items() for index in indices)
+    "Original labels for each hole: A1, A2, A3, B1, B2, B3, B4, etc."
+    probe_letters:Tuple[str,...] = tuple(probe_hole_idx.keys())
+    "Probe letters: A, B, C, D, E, F."
+    
+@dataclass
+class Probe:
+    letter:str
+    hole:str|None = None
+    notes:str|None = None
+        
+class ProbeGroup(collections.UserDict):
+    """User-facing container for Probe objects, which may have holes, notes, etc. assigned. 
+    Behaves like a dictionary of probe letters : hole labels."""
+
+    available_hole_labels = TS5.hole_labels
+    "Implant-specific properties - default to TS5 implant."
+    available_probe_letters = TS5.probe_letters
+    "Implant-specific properties - default to TS5 implant."
+    
+    def __init__(self, hole_labels:Mapping|Sequence[int|str|None], probe_letters:Sequence[str]='ABCDEF', **kwargs):
+        "Create a dictionary of probe letters to hole labels"
+        if len(hole_labels) != len(probe_letters):
+            raise ValueError(f"Number of hole labels ({len(hole_labels)}) must equal number of probes ({len(probe_letters)}).")
+        hole_labels, probe_letters = self.__class__.parse_hole_inputs(hole_labels, probe_letters)
+        self._probes = tuple(Probe(probe_letter) for probe_letter in probe_letters)
+        for k,v in kwargs.items():
+            setattr(self,k,v)
+        super().__init__(self.__dict__())
+        self.update_probe_holes(dict(zip(probe_letters, hole_labels)))
+        
+    def __dict__(self):
+        return dict(zip(self.probe_letters,self.hole_labels))
+    
+    def __setitem__(self, key, item):
+        "Update the dictionary and the relevant Probe object."
+        if key in self.data.keys() and self.data[key] == item:
+            return
+        self.validate_probe_letter(key)
+        self.validate_hole_label(item)
+        self.data[key] = item
+        if len(self.data) == len(self._probes):
+            self.update_probe_holes(dict(self))
+    
+    @property
+    def probe(self) -> Dict[str,Probe]:
+        "Dictionary of probe letters to Probe objects."
+        return dict(zip([probe.letter for probe in self._probes],self._probes))
+    
+    def update_probe_holes(self, probe_holes:Mapping):
+        "Apply new probe -> hole assignments and sync the dictionary."
+        hole_labels, probe_letters = self.__class__.parse_hole_inputs(probe_holes)
+        for probe, hole in dict(zip(probe_letters, hole_labels)).items():
+            # update Probe objects
+            self.probe[probe].hole = hole
+            # update dictionary
+            if probe not in self.keys() or self.data[probe] != hole:
+                self.data[probe] = hole
+     
+    @property
+    def probe_letters(self) -> Sequence[str]:
+        "Capital letter for each probe. e.g. `'A','B','C'`"
+        return tuple(probe.letter for probe in self._probes)
+    
+    @property
+    def hole_labels(self) -> Sequence[None|str]:
+        "Identifier for hole assigned to each probe, if any, e.g. `'A1','B2'`"
+        return tuple(probe.hole for probe in self._probes)
+    
+    @classmethod
+    def validate_probe_letter(cls, probe_letter:str):
+        if probe_letter not in cls.available_probe_letters:
+            raise ValueError(f"Probe letter must be one of {cls.available_probe_letters}: {probe_letter=}")
+    
+    @classmethod
+    def validate_hole_label(cls, hole_label:str|None):
+        if hole_label and hole_label.lower() == "none":
+            hole_label = None
+        if hole_label not in [None, *cls.available_hole_labels]:
+            raise ValueError(f"Label must be a probe+index combo string ('A1', 'B2', etc.): {hole_label=}")
+   
+    @classmethod
+    def validate_hole_index_for_probe(cls, probe_letter:str, hole_index:int|None):
+        "Preferred over validate_hole_label as it specifies available hole indices for probe."
+        if hole_index and f"{probe_letter}{hole_index}" not in cls.available_hole_labels:
+            raise ValueError(
+                f"Holes available for {probe_letter} are {[label[1:] for label in cls.available_hole_labels if label.startswith(probe_letter)]}: {hole_index=}"
+            )
+    
+    @classmethod
+    def probe_letter_and_hole_index_from_label(cls, label:str) -> Tuple[str,int]|Tuple[None,None]:
+        "Convert a hole label, e.g. 'A1', to a probe letter and hole index"
+        if label is None:
+            return None, None
+        if not isinstance(label,str):
+            raise TypeError(f"Label must be a string, e.g. 'A1': {label=}, {type(label)=}")
+        probe_letter = label[0].upper()
+        cls.validate_probe_letter(probe_letter)
+        hole_index = int(label[1:])
+        cls.validate_hole_index_for_probe(probe_letter,hole_index)
+        return probe_letter, hole_index 
+   
+    @classmethod
+    def parse_hole_inputs(cls,
+        hole_input:Sequence[str|int|None]|Mapping[str,int|str|None],
+        probe_letters:Sequence[str]=None,
+        ) -> Tuple[Tuple[str|None,...], Tuple[str,...]]:
+        "Convert inputs into a sequence of hole labels, ordered by probe letter."
+        
+        if probe_letters is None:
+            probe_letters = cls.available_probe_letters[:len(hole_input)]
+        if len(hole_input) != len(probe_letters):
+            raise ValueError(
+                f"holes input must be a sequence with the same length as probe_letters, using None entries to fill gaps as required: {len(probe_letters)}: {len(hole_input)=}"
+            )
+            
+        hole_output:Tuple[Optional[str]]|List[Optional[str]] = []
+            
+        # deal with mapping -------------------------------------------------------------------- #
+        if isinstance(hole_input,dict):
+            hole_input = {k:v for k,v in sorted(hole_input.items(), key=lambda i: i[0])}
+            # validate values by passing back through this function
+            hole_output, probe_letters = cls.parse_hole_inputs(list(hole_input.values()), list(hole_input.keys()))
+            
+        # deal with lists ---------------------------------------------------------------------- #
+        elif all(isinstance(i, int|None) for i in hole_input):
+            hole_output = []
+            for probe, hole in zip(probe_letters, hole_input):
+                if hole is None:
+                    hole_output.append(None)
+                else:
+                    hole_output.append(f"{probe}{hole}")
+                    
+        elif all(isinstance(i, str|None) for i in hole_input):
+            hole_output = [i for i in hole_input]
+          
+        # validate labels by attempting to convert label (A1 expected) to probe and hole
+        map(cls.probe_letter_and_hole_index_from_label, hole_output)
+        
+        return tuple(hole_output), tuple(probe_letters)
+    
+    def add_notes_to_probe(self, notes:str, probe_letter:str):
+        "Add notes to a specific probe"
+        self.validate_probe_letter(probe_letter)
+        if not isinstance(notes,str):
+            raise TypeError(f"Notes must be a string: {notes=}, {type(notes)=}")
+        self.probe[probe_letter].notes = notes
+        
+    def save_to_json(self, path:pathlib.Path, probe_group_name:str='probe_group',**kwargs):
+        "Save to a JSON file, appending if file already exists."
+        path = pathlib.Path(path).with_suffix('.json')
+        
+        dump = dict()
+        
+        dump[probe_group_name] = {
+            f"probe{p.letter}" : p.__dict__ 
+                for p 
+                in self.probe.values()
+        }
+        
+        for k,v in kwargs.items():
+            dump[probe_group_name][k] = v
+            
+        strfmt = "%Y%m%d%H%M"
+        dump[probe_group_name][f'saved_{strfmt}'] = datetime.datetime.now().strftime(strfmt)
+        
+        try:
+            if path.exists():
+                with open(path,'r') as f:
+                    data = json.load(f)
+                if probe_group_name in data.keys():
+                    data[probe_group_name].update(dump[probe_group_name])
+        except:
+            data = dump
+            path.parent.mkdir(parents=True,exist_ok=True)
+            
+        with open(path,'w') as f:
+            json.dump(data,f,indent=4)
+            
+        
+class ProbeInsertionsTS5(ProbeGroup):
+    "Record of actual insertions for a given recording."
+    
+    save_dir = DR_PROBE_INSERTION_RECORDS_DIR
+    
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args, probe_letters='ABCDEF',**kwargs)
+            
+    def save(self, day:Literal[1,2,3,4]=None, probe_group_name:str='probe_insertions', path=None, **kwargs):
+        "Write probe info to a JSON file, adding extra fields as kwargs."
+        if not day and hasattr(self,'day'):
+            day = self.day
+        if not day:
+            raise ValueError("Day must be specified")  
+        filename = datetime.datetime.now().strftime("%Y%m%d") + f"_day{day}_probe_insertions.json"
+        if not path:
+            path = self.save_dir / filename
+        kwargs['implant'] ='TS-5/2002/DR1'
+        kwargs['day_1-4'] = day
+        super().save_to_json(
+            path=path, 
+            probe_group_name=probe_group_name, 
+            **kwargs
+            )
+    
+class ProbeTargetsFromPlanTS5(ProbeGroup):
+    """Insertion targets for a given week, as specified by Corbett's plan.
+    
+    The plan has 8 weeks, two sets of targets per week: 
+    - first set for recordings on day 1 and day 3,
+    - second set for recordings on day 2 and day 4.
+    """
+    plan = (
+        ((1, 1, 1, 1, 1, 1), (2, 2, 2, 2, 2, 2)),
+        ((1, 1, 1, 2, 2, 2), (2, 2, 2, 1, 1, 1)),
+        ((1, 2, 2, 1, 1, 2), (2, 1, 1, 2, 2, 1)),
+        ((1, 2, 2, 2, 2, 1), (2, 1, 1, 1, 1, 2)),
+        ((2, 1, 2, 1, 2, 1), (1, 2, 1, 2, 1, 2)),
+        ((2, 2, 1, 2, 1, 1), (1, 1, 2, 1, 2, 2)),
+        ((2, 1, 2, 2, 1, 2), (1, 2, 1, 1, 2, 1)),
+        ((2, 2, 1, 1, 2, 2), (1, 1, 2, 2, 1, 1)),
+    )
+    "Target holes (1-indexed) for each probe (x6), for each day (x2), for each week (x8)"
+    first_week = datetime.date(2022,10,17) # Oct 17-21
+    "First week of planned probe assignments for TS5 implant"
+    skipped_weeks:int = COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN
+    "Tally of weeks with no DR exps"
+    
+    def __init__(self, day:Literal[1,2,3,4],*args, week:int=None,**kwargs):
+        if not week:
+            week = self.get_plan_week()
+        self.week = week
+        targets = self.targets_by_day_and_week(week=self.week, day=day)
+        super().__init__(hole_labels=targets, probe_letters='ABCDEF',*args,**kwargs)
+        
+    @classmethod
+    def get_plan_week(cls) -> int:
+        "Number of weeks since start of plan (1-indexed)"
+        weeks_since_first_week = int((datetime.date.today() - cls.first_week).days / 7)
+        return 1 + weeks_since_first_week - cls.skipped_weeks
+    
+    @classmethod
+    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:int=None) -> Tuple[int,int,int,int,int,int]:
+        "Return the target holes for a given day (1-4) and week (1-8), defaulting to week since start of plan"
+        if week is None:
+            week = cls.get_plan_week()
+        if any(v == 0 for v in (week, day)):
+            raise ValueError(f"Day and week are 1-indexed: {day=}, {week=} (0 is not allowed)")
+        day = (day - 1) % 2
+        week = (week - 1) % 8
+        return cls.plan[week][day]
+    
+class TS5DrawingSVG:
+    """Functions for controlling and altering graphic representation of ProbeGroups on implant image, 
+    but not functions for displaying it."""
+    
+    svg_path:pathlib.Path = pathlib.Path("//allen/programs/mindscope/workgroups/dynamicrouting/ben/implants/DR1.svg")
+    ".svg of first production DR implant, known as DR1, TS-5, 2002, with labels for each hole that designate a probe (A1, B2, etc.)"
+    svg_data:str = svg_path.open('r').read()
+    "Raw SVG data is XML, which can be parsed or used as a string, updated then displayed as HTML"
+    implant:ImplantHoles = TS5()
+
+    def __init__(self, probe_hole_assignments:ProbeGroup|Sequence|Mapping=None, **kwargs):
+        if isinstance(probe_hole_assignments, ProbeGroup):
+            self.current_probe_hole_assignments:dict[str,str|None] = probe_hole_assignments
+        else:
+           self.current_probe_hole_assignments:dict[str,str|None] = ProbeGroup(probe_hole_assignments)
+           "Holes for each probe to be drawn on implant"
+        self.previous_probe_hole_assignments:dict[str,str|None] = ProbeGroup([None]*6)
+        "Last-known assigned holes, in case we need to 'undo' a probe-hole assignment"
+    
+    @property
+    def drawing_with_current_probe_hole_assignments(self) -> str:
+        "Updated SVG code with current target holes"
+        self.resolve_current_probe_hole_assignments()
+        return self.__class__.add_probe_hole_assignments_to_svg(self.current_probe_hole_assignments)
+        # return self.__class__.add_probe_hole_assignments_to_svg(self.hole_label_to_probe_map)
+    
+    @classmethod
+    def add_probe_hole_assignments_to_svg(cls, probe_hole_assignments:Sequence|Mapping|ProbeGroup) -> str:
+        "Add probe-assigned holes to stored SVG data"
+        if not isinstance(probe_hole_assignments, ProbeGroup):
+            probe_hole_assignments = ProbeGroup(probe_hole_assignments)
+        data:str = cls.svg_data
+        reverse_mapping = {v:k for k,v in probe_hole_assignments.items()}
+        
+        for textlabel in cls.implant.hole_labels:
+        # for hole, textlabel in dict(probe_hole_assignments).items():
+            if textlabel not in probe_hole_assignments.values():
+                data = data.replace(f">{textlabel}</tspan>", f"></tspan>")
+            else:
+                probe_letter = reverse_mapping[textlabel]
+                data = data.replace(f">{textlabel}</tspan>", f"> {probe_letter}</tspan>")
+        return data
+
+    # @property
+    # def hole_label_to_probe_map(self) -> Mapping[str, Optional[str]]:
+    #     "Assigned probe for each hole, e.g. `{'A1': 'A', 'A2': None, 'B2': 'B', ...}`"
+    #     hole_probe:Dict[str,str|None] = dict()
+    #     self.resolve_current_probe_hole_assignments()
+    #     # for probe_letter, hole_label in self.current_probe_hole_assignments.items():
+    #     #     hole_labels[hole_label] = probe_letter
+    #     return dict(self.current_probe_hole_assignments)
+    
+    def resolve_current_probe_hole_assignments(self):
+        "Resolve conflicts, such as multiple probes assigned to the same hole"
+        
+        for probe, hole in dict(self.previous_probe_hole_assignments).items():
+            if (
+                len([t for t in self.previous_probe_hole_assignments.values() if t == hole]) > 1
+            ): # probe was previously un-assigned from a hole that another probe was also assigned
+                if (
+                    self.current_probe_hole_assignments[probe] is None 
+                    and hole not in self.current_probe_hole_assignments.values()
+                    ):
+                    # restore previously assigned hole, now that it's unoccupied 
+                    self.current_probe_hole_assignments[probe] = hole
+                    # print(f"Restored previous target for {probe} to {hole}")
+                    
+        for probe, hole in dict(self.current_probe_hole_assignments).items():
+            if (
+                len([t for t in self.current_probe_hole_assignments.values() if t == hole]) > 1
+            ): # probe is assigned a hole that another probe is also assigned to
+                if self.previous_probe_hole_assignments[probe] == hole:
+                    # this probe was previously assigned to this hole, so it's probably
+                    # getting 'overwritten' by a new probe assignment, which will take
+                    # precedence
+                    self.current_probe_hole_assignments[probe] = None
+                    # print(f"Probe {probe} was previously assigned to hole {hole}, but is now being overwritten by another probe assignment. Probe {probe} will be removed from the implant.")
+          
+            # for newly-updated probes, store their target hole in memory
+            if self.current_probe_hole_assignments[probe]:
+                self.previous_probe_hole_assignments[probe] = self.current_probe_hole_assignments[probe]
+    
+
+class ProbeTargetInsertionRecordWidget(ipw.VBox):
+    "Displays implant, configurable probe-hole assignments, and buttons for interaction"
+    
+    def __init__(self, targets:ProbeGroup, implant_drawing=TS5DrawingSVG, *args, **kwargs):
+        "Requires targets and a drawing"
+        
+        self.initial_targets:Dict[str,str|None] = dict(targets)
+        self.probe_letters:List[str] = list(targets.keys())
+        self.implant_drawing = implant_drawing(targets)
+        "Holds current probe-hole assignments in ProbeGroups and modifies SVG content accordingly"
+        
+        if kwargs:
+            for k,v in kwargs.items():
+                setattr(self, k, v)
+        
+        # interactive display of implant and probe-hole assignments ---------------------------- #
+        
+        self.current_insertions:ProbeGroup = ProbeInsertionsTS5(dict(self.initial_targets))
+        
+        if isinstance(self.implant_drawing.drawing_with_current_probe_hole_assignments, str):
+            self.update_current_probe_hole_assignment_display = self.update_probe_hole_assignments_display_from_html
+        
+        self.probe_hole_sliders = [
+                ipw.SelectionSlider(
+                    options=["none", *self.implant_drawing.implant.hole_labels],
+                    value=self.current_insertions[probe] or "none",
+                    description=f"probe {probe}",
+                    continuous_update=True,
+                    orientation='horizontal',
+                    readout=True,
+                ) 
+                for probe in self.probe_letters
+            ] 
+        "Set and display probe-hole assignments for each probe"
+        
+        link_args = dict(zip(self.probe_letters, self.probe_hole_sliders))
+            
+        def interactive_probe_hole_assignment(**kwargs):
+            "Update probe-hole assignments when sliders are changed"
+            for probe, hole in kwargs.items():
+                self.current_insertions[probe] = hole
+            self.update_current_probe_hole_assignment_display()
+    
+        # -------------------------------------------------------------------------------------- #
+        self.interactive_implant_display = ipw.interactive_output(
+            f=interactive_probe_hole_assignment,
+            controls=link_args,
+        )
+        # -------------------------------------------------------------------------------------- #
+        
+        # additional ui elements --------------------------------------------------------------- #
+        self.note_entry_boxes = [
+                ipw.Text(
+                    value=self.current_insertions.probe[probe].notes,
+                    placeholder=f"Add notes for probe {probe}",
+                    continuous_update=True,
+                ) 
+                for probe in self.probe_letters
+            ]
+        "Text entry box for notes for each probe"
+        
+        self.slider_ui = ipw.VBox([*self.probe_hole_sliders]) if (
+                self.probe_hole_sliders[0].orientation == 'horizontal'
+            ) else ipw.HBox([*self.probe_hole_sliders])
+        self.notes_ui = ipw.VBox([*self.note_entry_boxes])
+        # -------------------------------------------------------------------------------------- #
+        self.slider_notes_ui = ipw.HBox([self.slider_ui,self.notes_ui])
+        # -------------------------------------------------------------------------------------- #
+        
+        self.save_button = ipw.Button(description='Save', button_style='success')
+        self.clear_button = ipw.Button(description='Clear', button_style='warning')
+        self.reload_button = ipw.Button(description='Reload targets', button_style='info')
+        self.save_button.on_click(functools.partial(self.save_button_clicked, self))
+        self.clear_button.on_click(functools.partial(self.clear_button_clicked, self))
+        self.reload_button.on_click(functools.partial(self.reload_button_clicked, self))
+        # -------------------------------------------------------------------------------------- #
+        self.button_ui = ipw.HBox([self.clear_button,self.reload_button,self.save_button])
+        # -------------------------------------------------------------------------------------- #
+        
+        self.output = ipw.Output()
+        "Console for displaying messages"
+        self.console_clear()
+        
+        super().__init__([
+            self.interactive_implant_display,
+            self.slider_notes_ui,
+            self.button_ui,
+            self.output
+            ])
+        "Feed all UI elements into superclass widget"
+        
+        self.layout = ipw.Layout(width='100%')
+
+    # end of init - widget returned/displayed ----------------------------------------------- #
+            
+    @property
+    def probe_hole_assignments_display_handle(self):
+        
+        if not hasattr(self,'_probe_hole_assignments_display'):
+            self._probe_hole_assignments_display = IPython.display.DisplayHandle()
+        return self._probe_hole_assignments_display
+    
+    def update_probe_hole_assignments_display_from_html(self):
+        self.probe_hole_assignments_display_handle.update(
+            ipw.HTML(
+                self.implant_drawing.drawing_with_current_probe_hole_assignments,
+                layout=ipw.Layout(align_content='center',object_fit='scale-down'),
+                # layout not working
+            )
+        )
+        
+    def console_print(self,msg:str):
+        with self.output:
+            sys.stdout.write(f"{datetime.datetime.now().strftime('%H:%M:%S')} {msg}\r")
+            sys.stdout.flush()
+
+    def console_clear(self):
+        msg =" "*30
+        with self.output:
+            sys.stdout.write(f"{msg}\r")
+            sys.stdout.flush()
+
+    def save_button_clicked(self, *args, **kwargs):
+        if hasattr(self, 'day'):
+            day = self.day   
+        #! notes are not being transferred to Probe class via note_entry_boxes:
+        # print([text.value for text in self.note_entry_boxes])
+        # print([text.notes for text in self.current_insertions._probes])
+        # will manually update notes prior to saving as a temp fix
+        self.implant_drawing.resolve_current_probe_hole_assignments()
+        # self.current_insertions.update_probe_holes(dict(self.implant_drawing.current_probe_hole_assignments))
+        for probe, text in zip(self.current_insertions._probes, self.note_entry_boxes):
+            probe.notes = text.value or None
+        self.current_insertions.save(day=day)
+        self.console_print("Insertions saved.")
+        
+    def clear_button_clicked(self, *args, **kwargs):
+        for slider in self.probe_hole_sliders:
+            slider.value = 'none'
+        self.console_clear()
+        
+    def reload_button_clicked(self, *args, **kwargs):
+        for probe, slider in zip(self.probe_letters,self.probe_hole_sliders):
+            if hole := self.initial_targets[probe]:
+                slider.value = hole
+            else:
+                slider.value = "none"
+        self.console_print("Targets reloaded.") 
+         
+
+class DRWeeklyTargets(ipw.Tab):
+    def __init__(self):
+        
+        super().__init__() 
+        
+        days = (1,2,3,4)
+        ui_each_day = []
+        for day in days:
+            ui_each_day.append(
+                ProbeTargetInsertionRecordWidget(
+                    targets=ProbeTargetsFromPlanTS5(day=day),
+                    implant_drawing=TS5DrawingSVG,
+                    day=day,
+                )
+            )
+        self.children = ui_each_day
+
+        # setting titles is different between ipywidgets 8.x and 7.x 
+        # (7.x is latest v. compatible w/VSCode Oct'22)
+        tab_titles = [f"Day {day}" for day in days]
+        try:
+            # ipw 7.x
+            # map(self.set_title, enumerate(tab_titles))
+            for tab, day in enumerate(days):
+                self.set_title(tab, f'Day {day}')
+        except:
+            # ipw 8.x
+            self.titles = tab_titles
+            
+        self.layout=ipw.Layout(align_content='center',height='auto',width='auto')
+        
+ #------ old -------------------------------------------------------------------------------- #
 class ImplantSVG:
     "Functions for displaying and interacting with DR implant image"
     
     DR1_SVG = pathlib.Path(R"\\allen\programs\mindscope\workgroups\dynamicrouting\ben\implants\DR1.svg")
     "Default - labelled .svg of first production DR implant, known as DR1, TS-5, 2002"
-    path:pathlib.Path = DR1_SVG
-    svg:str = path.open('r').read()    
-    labels = {
+    svg_path:pathlib.Path = DR1_SVG
+    svg_data:str = svg_path.open('r').read()    
+    probe_hole_idx = {
         'A':[1,2,3],
         'B':[1,2,3,4],
         'C':[1,2,3,4],
@@ -22,33 +582,122 @@ class ImplantSVG:
         'F':[1,2,3],
     } 
     "Available integer labels for each probe"
-    strings:List[str] = list(f"{k}{i}" for k,v in labels.items() for i in v)
+    hole_labels:List[str] = list(f"{k}{i}" for k,v in probe_hole_idx.items() for i in v)
     "Original labels for each hole: A1, A2, A3, B1, B2, B3, B4, etc."
-    hole_memory_default:dict = dict(zip(strings,strings))
+    
+    @classmethod
+    def index_to_label(cls, index:int=None):
+        "Integer to string label: 0 -> A1, 1 -> A2, 2 -> A3, 3 -> B1, 4 -> B2, 5 -> B3, 6 -> B4, etc."
+        if index is None:
+            return None 
+        if index not in range(len(cls.hole_labels)):
+            raise ValueError(f"index must be in range 1-{len(cls.hole_labels)}: {index=}")
+        return cls.hole_labels[index]
+    
+    @classmethod
+    def probe_letter_and_hole_index_from_label(cls, label:str) -> Tuple[str|None,int|None]:
+        "Convert a string label to a probe letter and hole index"
+        if label is None:
+            return None, None
+        if not isinstance(label,str):
+            raise TypeError(f"Label must be a string: {label=}, {type(label)=}")
+        probe = label[0].upper()
+        if probe not in list('ABCDEF'):
+            raise ValueError(f"Probe must be one of A-F: {probe=}")
+        hole = int(label[1:])
+        if label not in cls.hole_labels:
+            raise ValueError(f"Input should be a labelled string (A1, B2, etc.): probes available for {probe} are [{cls.probe_hole_idx[probe]}]")
+        return probe, hole
+
+    hole_memory_default:dict = dict(zip(hole_labels,hole_labels))
     "Lookup table so we can find the current textlabel for a given hole - original set in case we need to reset"
     
-    def __init__(self, path:None|str|pathlib.Path=None):
+    plan = (
+        ((1, 1, 1, 1, 1, 1), (2, 2, 2, 2, 2, 2)),
+        ((1, 1, 1, 2, 2, 2), (2, 2, 2, 1, 1, 1)),
+        ((1, 2, 2, 1, 1, 2), (2, 1, 1, 2, 2, 1)),
+        ((1, 2, 2, 2, 2, 1), (2, 1, 1, 1, 1, 2)),
+        ((2, 1, 2, 1, 2, 1), (1, 2, 1, 2, 1, 2)),
+        ((2, 2, 1, 2, 1, 1), (1, 1, 2, 1, 2, 2)),
+        ((2, 1, 2, 2, 1, 2), (1, 2, 1, 1, 2, 1)),
+        ((2, 2, 1, 1, 2, 2), (1, 1, 2, 2, 1, 1)),
+    )
+    "Target holes (1-indexed) for each probe(x6), for each day(x2), for each week(x8)"
+
+    first_week = datetime.date(2022,10,10) # Oct 10-16
+    "First week of planned probe assignments for DR1 implant"
+    skipped_weeks:int = 0
+    "Tally of weeks with no DR exps"
+    
+    @classmethod
+    def get_plan_week(cls) -> int:
+        "Number of weeks since start of plan (1-indexed)"
+        weeks_since_first_week = int((datetime.date.today() - cls.first_week).days / 7)
+        return 1 + weeks_since_first_week - cls.skipped_weeks
+    
+    day = 2
+    "Current day in plan (1-indexed)"
+    
+    @classmethod
+    def targets_by_day_and_week(cls, day:int = None, week:int = None) -> Tuple[int,int,int,int,int,int]:
+        "Return the target holes for a given week (1-8) and day (1-4)"
+        if week is None:
+            week = cls.get_plan_week() #! not working in notebook - can't set cls.week from outside
+        if day is None:
+            day = cls.day
+        if any(v == 0 for v in (week, day)):
+            raise ValueError(f"week and day are 1-indexed: {week=}, {day=}")
+        day = (day - 1) % 2
+        week = (week - 1) % 8
+        return cls.plan[week][day]
+    
+    def __init__(self, day:int=None, svg_path:None|str|pathlib.Path=None):
         "Instantiate if we need to keep track of probe/hole assignments"
-        if path:
-            self.path = pathlib.Path(path)
-            self.svg:str = self.path.open('r').read()    
+        if svg_path:
+            self.svg_path = pathlib.Path(svg_path)
+            self.svg_data:str = self.svg_path.open('r').read()    
         if self.targets_path.exists():
             self.load_targets()
         else:
             self.probe_memory:Dict[str,str|None] = dict(zip(list('ABCDEF'),[None]*6))
-            "Assigned hole for each probe - effectively `hole_memory` reversed"
-        self.hole_memory:Dict[str,str|None] = dict(zip(self.strings,[None]*len(self.strings)))
-        "Lookup table so we can find the current textlabel for a given hole"
-        # added so we can store an image and keep modifying it, instead of re-loading
-        # from disk every re-draw, but reloading seems fast enough - this could just be
-        # worked out from probe_memory to avoid having to manually sync the two 
+            "Lookup table so we can find the current hole textlabel for a given probe"
+        self.probe_notes: Dict[str,str] = dict(zip(list('ABCDEF'),[None]*6))
     
     date_today: str = datetime.datetime.today().strftime("%Y%m%d") 
     records_dir = (DR1_SVG.parent / 'insertion_records')
     records_path = records_dir / (date_today + '_insertion_record.json')
     targets_dir = (DR1_SVG.parent / 'insertion_targets')
     targets_path = targets_dir / (date_today + '_insertion_targets.json')
+    #! make date live, not set on class instantiation
+    # def date_today() -> str:
+    #     return datetime.datetime.today().strftime("%Y%m%d") 
+    # records_dir = (DR1_SVG.parent / 'insertion_records')
+    # def records_path() -> pathlib.Path:
+    #     return records_dir / (date_today() + '_insertion_record.json')
+    # targets_dir = (DR1_SVG.parent / 'insertion_targets')
+    # targets_path = targets_dir / (date_today() + '_insertion_targets.json')
     
+    # @property
+    # def probe_notes(self) -> Dict[str,str]:
+    #     "Return the notes for all probes"
+    #     return self._probe_notes
+    
+    # @probe_notes.setter
+    # def probe_notes(self, probe: str, notes: str):
+    #     "Set the notes for a given probe"
+    #     self._probe_notes[probe] = notes
+    
+    @property
+    def hole_memory(self) -> Mapping[str, Optional[str]]:
+        "Assigned probe for each hole - effectively `probe_memory` reversed"
+        hole_memory:Dict[str, Optional[str]] = dict(zip(self.hole_labels,[None]*len(self.hole_labels)))
+        if not hasattr(self, 'probe_memory') or not any(self.probe_memory.values()):
+            return hole_memory
+        for probe, hole in self.probe_memory.items():
+            if hole is not None:
+                hole_memory.update({hole:probe})
+        return hole_memory
+
     @classmethod
     def targets_to_disk(cls, targets:Dict[str,str|None], path:str|pathlib.Path=targets_path):
         "Save current probe_memory to file"
@@ -67,32 +716,19 @@ class ImplantSVG:
             with open(path, 'r') as f:
                 return json.load(f)
         return None
-            
+    
     def save(self, path:str|pathlib.Path=records_path):
-        self.targets_to_disk(self.probe_memory, path)
+        self.__class__.targets_to_disk(self.probe_memory, path)
     
     def load_targets(self, path:str|pathlib.Path=targets_path):
-        if targets := self.targets_from_disk(path):
+        if targets := self.__class__.targets_from_disk(path):
             self.probe_memory = targets
-            for label in self.strings:
-                for k,v in self.probe_memory.items():
-                    if v == label:
-                        self.hole_memory[label] = k
-                else:
-                    self.hole_memory[label] = None
     
-    @classmethod
-    def index_to_label(cls, index:int=None):
-        "Integer to string label: 0 -> A1, 1 -> A2, 2 -> A3, 3 -> B1, 4 -> B2, 5 -> B3, 6 -> B4, etc."
-        if index is None:
-            return None 
-        if index not in range(len(cls.strings)):
-            raise ValueError(f"index must be in range 1-{len(cls.strings)}: {index=}")
-        return cls.strings[index]
-    
+
     @classmethod
     def show_all(cls):
-        return IPython.display.SVG(data=cls.svg)
+        from IPython.display import SVG
+        return IPython.display.SVG(data=cls.svg_data)
     
     @classmethod
     def show_targets(cls, target_holes:List[str|int|None]=[None]*6):
@@ -115,14 +751,14 @@ class ImplantSVG:
                 targets = dict(zip('ABCDEF',target_holes))
         
         for probe, target in targets.items():
-            if target and target not in cls.strings:
+            if target and target not in cls.hole_labels:
                 target_group = target[0]
-                available_labels = cls.labels[target_group]
+                available_labels = cls.probe_hole_idx[target_group]
                 raise ValueError(f"Invalid {target=}: available labels are {[f'{target_group}{a}' for a in available_labels]}")
             
-        data = cls.svg
+        data = cls.svg_data
         
-        for textlabel in cls.strings:
+        for textlabel in cls.hole_labels:
             if textlabel in targets.values(): 
                 probe = list(targets.keys())[list(targets.values()).index(textlabel)]
                 data = data.replace(f">{textlabel}</tspan>", f"> {probe}</tspan>")
@@ -136,7 +772,7 @@ class ImplantSVG:
             raise ValueError(f"'probe' must be one of A-F: {probe=}")
         if isinstance(hole, int):
             label = self.index_to_label(hole)
-        elif hole in [*self.strings, None]:
+        elif hole in [*self.hole_labels, None]:
             label = hole
         elif isinstance(hole,str) and hole.lower() == 'none':
             label = None
@@ -147,9 +783,9 @@ class ImplantSVG:
             # already assigned
             return
         
-        if current_label := self.probe_memory[probe]:
-            # probe already assigned to a hole - remove it from the hole_memory
-            self.hole_memory[current_label] = None
+        # if current_label := self.probe_memory[probe]:
+        #     # probe already assigned to a hole - remove it from the hole_memory
+        #     self.hole_memory[current_label] = None
             
         if label and label in self.probe_memory.values():
             # hole already assigned to other probe(s) - remove previous assignments
@@ -157,15 +793,235 @@ class ImplantSVG:
                 if self.probe_memory[other_probe] == label:
                     self.set_probe_hole(other_probe,None)
         self.probe_memory[probe] = label
-        if label:
-            self.hole_memory[label] = probe
+        # if label:
+        #     self.hole_memory[label] = probe
     
-    def show_memory(self):
-        data = self.svg
+    @property
+    def svg_with_current_targets(self) -> str:
+        data = self.svg_data
         for hole, textlabel in self.hole_memory.items():
             if textlabel is None:
                 data = data.replace(f">{hole}</tspan>", f"></tspan>")
             else:
                 data = data.replace(f">{hole}</tspan>", f"> {textlabel}</tspan>")
-        return IPython.display.SVG(data=data) 
+        return data
+    
+    def show_memory(self):
+        return IPython.display.SVG(data=self.svg_with_current_targets) 
+    def show_memory_ipw(self):
+        import ipywidgets as ipw
+        return ipw.HTML(self.svg_with_current_targets) 
+
+
+def insertion_widget():
+    import datetime
+    import sys
+
+    import ipywidgets as ipw
+    from IPython.display import display
+
+    from implant_drawing import ImplantSVG
+
+    implant = ImplantSVG()
+
+    def show_current(a,b,c,d,e,f):
+        for probe, hole in zip('ABCDEF',[a,b,c,d,e,f]):
+            implant.set_probe_hole(probe, hole)
+        return display(implant.show_memory())
+
+    title = ipw.HTML('<em>Actual</em>')
+    sliders = [
+            ipw.SelectionSlider(
+            options=["none", *implant.hole_labels],
+            value=implant.probe_memory[probe] or "none",
+            description=f"probe {probe}",
+            continuous_update=True,
+            orientation='vertical',
+            readout=True,
+            ) 
+            for probe in 'ABCDEF'
+    ]
+    save = ipw.Button(description='Save', button_style='success')
+    clear = ipw.Button(description='Clear', button_style='warning')
+    reload = ipw.Button(description='Reload targets', button_style='info')
+    output = ipw.Output()
+
+    slider_ui = ipw.HBox([*sliders])
+    button_ui = ipw.HBox([save, clear]) # reload - not working
+    ui = ipw.VBox([slider_ui, button_ui, output])
+
+    def console_print(msg:str):
+        with output:
+            sys.stdout.write(f"{datetime.datetime.now().strftime('%H:%M:%S')} {msg}\r")
+            sys.stdout.flush()
+            
+    def console_clear():
+        msg =" "*30
+        with output:
+            sys.stdout.write(f"{msg}\r")
+            sys.stdout.flush()
+        
+    def save_button_clicked(*args, **kwargs):
+        implant.save()
+        console_print("Insertions saved.")
+    save.on_click(save_button_clicked)
+
+    def clear_button_clicked(*args, **kwargs):
+        for slider in sliders:
+            slider.value = 'none'
+        console_clear()
+    clear.on_click(clear_button_clicked)
+
+    def reload_button_clicked(*args, **kwargs):
+        implant.load_targets()
+        for probe, slider in list(zip('ABCDEF',sliders)):
+            if v := implant.probe_memory[probe]:
+                slider.value = v
+            else:
+                slider.value = "none"
+        console_print("Targets reloaded.")
+    reload.on_click(reload_button_clicked)
+
+    link_args = dict()
+    link_args.update(dict(zip('abcdef',[slider for slider in sliders])))
+
+    out = ipw.interactive_output(
+        f=show_current,
+        controls=link_args
+    )
+
+    console_clear() # printing might resize grid in 'out', so do it once before displaying
+
+    display(out,ui)
+
+import datetime
+import functools
+import sys
+
+import IPython
+import ipywidgets as ipw
+from IPython.display import display
+
+from implant_drawing import ImplantSVG
+
+
+class ImplantWidget:
+    def __init__(self, implant: ImplantSVG):
+        self.implant = implant
+    
+        self.title = ipw.HTML(f'<b>Week {self.implant.get_plan_week()}</b>')
+        
+        self.sliders = [
+                ipw.SelectionSlider(
+                options=["none", *self.implant.hole_labels],
+                value=self.implant.probe_memory[probe] or "none",
+                description=f"probe {probe}",
+                continuous_update=True,
+                orientation='horizontal',
+                readout=True,
+                ) 
+                for probe in 'ABCDEF'
+            ] 
+        "set_probe_insertion_sliders"
+        
+        self.note_entry_boxes = [
+                ipw.Text(
+                value=self.implant.probe_notes[probe],
+                placeholder=f"Add notes for probe {probe}",
+                continuous_update=True,
+                ) 
+                for probe in 'ABCDEF'
+            ]
+        
+        self.slider_ui = ipw.VBox([*self.sliders]) if self.sliders[0].orientation == 'horizontal' else ipw.HBox([*sliders])
+        self.notes_ui = ipw.VBox([*self.note_entry_boxes])
+        
+        self.save_button = ipw.Button(description='Save', button_style='success')
+        self.clear_button = ipw.Button(description='Clear', button_style='warning')
+        self.reload_button = ipw.Button(description='Reload targets', button_style='info')
+        self.save_button.on_click(functools.partial(self.save_button_clicked, self))
+        self.clear_button.on_click(functools.partial(self.clear_button_clicked, self))
+        self.reload_button.on_click(functools.partial(self.reload_button_clicked, self))
+        
+        self.output = ipw.Output()
+        
+        button_ui = ipw.HBox([self.clear_button,self.reload_button,self.save_button])
+        slider_notes_ui = ipw.HBox([self.slider_ui,self.notes_ui])
+        
+        self.ui = ipw.VBox([slider_notes_ui, button_ui, self.output])
+    
+    def console_print(self,msg:str):
+        with self.output:
+            sys.stdout.write(f"{datetime.datetime.now().strftime('%H:%M:%S')} {msg}\r")
+            sys.stdout.flush()
+
+    def console_clear(self):
+        msg =" "*30
+        with self.output:
+            sys.stdout.write(f"{msg}\r")
+            sys.stdout.flush()
+
+    def save_button_clicked(self,*args, **kwargs):
+        self.implant.save(ImplantSVG.DR1_SVG.parent / 'test'/ f'week{self.implant.week}_day{self.implant.day}.json')
+        self.console_print("Insertions saved.")
+        
+    def clear_button_clicked(self,*args, **kwargs):
+        for slider in self.sliders:
+            slider.value = 'none'
+        self.console_clear()
+        
+    def reload_button_clicked(self,*args, **kwargs):
+        self.implant.load_targets()
+        for probe, slider in list(zip('ABCDEF',self.sliders)):
+            if v := self.implant.probe_memory[probe]:
+                slider.value = v
+            else:
+                slider.value = "none"
+        self.console_print("Targets reloaded.") 
+                
+       
+        
+def insertion_schedule():
+
+
+    tab = ipw.Tab()
+    tab_children = []
+    tab_titles = []
+    tab_interactive_outputs =[]
+    implants = {day:ImplantSVG() for day in '1234'}
+    for day in '1234':
+        implant = implants[day]
+        targets = implant.targets_by_day_and_week(int(day),1)
+        [implant.set_probe_hole(i,f'{i}{v}') for i,v in zip('ABCDEF', targets)]
+        widget = ImplantWidget(implant)
+        link_args =  dict()
+        link_args.update(dict(zip('abcdef',[slider for slider in widget.sliders])))
+        tab_titles.append(day)
+        def show_current(a,b,c,d,e,f):
+            for probe, hole in zip('ABCDEF',[a,b,c,d,e,f]):
+                implant.set_probe_hole(probe, hole)
+            return display(implant.show_memory_ipw())
+        
+        out = ipw.interactive_output(
+            f=show_current,
+            controls=link_args,
+        )
+        
+        tab_children.append(ipw.VBox([out,widget.ui]))
+        tab_interactive_outputs.append(
+            out
+            )
+        
+    tab.children = tab_children
+    try:
+        # ipw 7.x
+        # map(tab.set_title, enumerate(tab_titles))
+        for i,x in enumerate('1234'):
+            tab.set_title(i, 'Day '+x)
+    except:
+        # ipw 8.x
+        tab.titles = tab_titles
+
+    return IPython.display.display(widget.title,tab)
+
     

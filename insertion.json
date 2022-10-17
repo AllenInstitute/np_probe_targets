@@ -1,0 +1,74 @@
+{
+    "gday1": {
+        "probes": [
+            {
+                "letter": "A",
+                "hole": "A1",
+                "notes": null
+            },
+            {
+                "letter": "B",
+                "hole": "B1",
+                "notes": null
+            },
+            {
+                "letter": "C",
+                "hole": "C1",
+                "notes": null
+            },
+            {
+                "letter": "D",
+                "hole": "D1",
+                "notes": null
+            },
+            {
+                "letter": "E",
+                "hole": "E1",
+                "notes": null
+            },
+            {
+                "letter": "F",
+                "hole": "F1",
+                "notes": null
+            }
+        ],
+        "implant": "TS-5/2002/DR1",
+        "saved_%Y%m%d%H%M": "202210151118"
+    },
+    "probe_insertions": {
+        "probes": [
+            {
+                "letter": "A",
+                "hole": "A1",
+                "notes": null
+            },
+            {
+                "letter": "B",
+                "hole": "B1",
+                "notes": null
+            },
+            {
+                "letter": "C",
+                "hole": "C1",
+                "notes": null
+            },
+            {
+                "letter": "D",
+                "hole": "D1",
+                "notes": null
+            },
+            {
+                "letter": "E",
+                "hole": "E1",
+                "notes": null
+            },
+            {
+                "letter": "F",
+                "hole": "F1",
+                "notes": null
+            }
+        ],
+        "implant": "TS-5/2002/DR1",
+        "saved_%Y%m%d%H%M": "202210151116"
+    }
+}
