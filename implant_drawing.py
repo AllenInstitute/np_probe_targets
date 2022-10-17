@@ -387,7 +387,7 @@ class TS5DrawingSVG:
                 self.previous_probe_hole_assignments[probe] = self.current_probe_hole_assignments[probe]
     
 
-class ProbeTargetInsertionRecordWidget(ipw.VBox):
+class ProbeTargetInsertionRecordWidget(ipw.HBox):
     "Displays implant, configurable probe-hole assignments, and buttons for interaction"
     
     def __init__(self, targets:ProbeGroup, implant_drawing=TS5DrawingSVG, *args, **kwargs):
@@ -472,11 +472,11 @@ class ProbeTargetInsertionRecordWidget(ipw.VBox):
         "Console for displaying messages"
         self.console_clear()
         
+        left_box = self.interactive_implant_display
+        right_box = ipw.VBox([self.slider_notes_ui, self.button_ui, self.output])
         super().__init__([
-            self.interactive_implant_display,
-            self.slider_notes_ui,
-            self.button_ui,
-            self.output
+            left_box,
+            right_box,
             ])
         "Feed all UI elements into superclass widget"
         
