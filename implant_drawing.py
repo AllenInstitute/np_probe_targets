@@ -566,6 +566,37 @@ class DRWeeklyTargets(ipw.Tab):
             self.titles = tab_titles
             
         self.layout=ipw.Layout(align_content='center',height='auto',width='auto')
+        
+class DRWeeklyTargetsViewOnly(ipw.Tab):
+    def __init__(self, week=None):
+        "Display-only weekly targets - defaults to current week from plan"
+        super().__init__() 
+        
+        days = (1,2,3,4)
+        ui_each_day = []
+        for day in days:
+            ui_each_day.append(
+                ipw.HTML(
+                    TS5DrawingSVG(
+                        ProbeTargetsFromPlanTS5(day=day, week=week),
+                    ).drawing_with_current_probe_hole_assignments
+                )
+            )
+        self.children = ui_each_day
+
+        # setting titles is different between ipywidgets 8.x and 7.x 
+        # (7.x is latest v. compatible w/VSCode Oct'22)
+        tab_titles = [f"Day {day}" for day in days]
+        try:
+            # ipw 7.x
+            # map(self.set_title, enumerate(tab_titles))
+            for tab, day in enumerate(days):
+                self.set_title(tab, f'Day {day}')
+        except:
+            # ipw 8.x
+            self.titles = tab_titles
+            
+        self.layout=ipw.Layout(align_content='center',height='auto',width='auto')
 
 class CurrentWeek:
     "The current week at runtime: displayed so user can check if GUI needs refreshing"
