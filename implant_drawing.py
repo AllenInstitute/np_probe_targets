@@ -26,7 +26,7 @@ from typing import Dict, List, Literal, Mapping, Optional, Sequence, Tuple
 import IPython
 import ipywidgets as ipw
 
-COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 1
+COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 2
 "Keep a tally of weeks with no DR experiments: increment as needed"
 
 DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
@@ -290,7 +290,7 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
     def get_plan_week(cls) -> int:
         "Number of weeks since start of plan (1-indexed)"
         weeks_since_first_week = int((datetime.date.today() - cls.first_week).days / 7)
-        return 1 + weeks_since_first_week - cls.skipped_weeks
+        return 1 + max(0, weeks_since_first_week - cls.skipped_weeks) # minimum of week 1
     
     @classmethod
     def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:int=None) -> Tuple[int,int,int,int,int,int]:
