@@ -63,7 +63,7 @@ class Probe:
         
 class ProbeGroup(collections.UserDict):
     """User-facing container for Probe objects, which may have holes, notes, etc. assigned. 
-    Behaves like a dictionary of probe letters : hole labels."""
+    Behaves like a dictionary of `probe letters : hole labels`."""
 
     available_hole_labels = TS5.hole_labels
     "Implant-specific properties - default to TS5 implant."
@@ -538,7 +538,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
 
 class DRWeeklyTargets(ipw.Tab):
     def __init__(self):
-        
+        "Display and edit weekly targets - defaults to current week from plan"
         super().__init__() 
         
         days = (1,2,3,4)
