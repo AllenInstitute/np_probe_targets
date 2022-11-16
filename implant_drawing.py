@@ -32,7 +32,6 @@ COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 3
 DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/implants/insertion_records"
 )
-"Directory for storing insertion records."
 
 class ImplantHoles:
     "Establishes the labels of available holes for an implant."
@@ -72,8 +71,6 @@ class ProbeGroup(collections.UserDict):
     
     def __init__(self, hole_labels:Mapping|Sequence[int|str|None], probe_letters:Sequence[str]='ABCDEF', **kwargs):
         "Create a dictionary of probe letters to hole labels"
-        if len(hole_labels) != len(probe_letters):
-            raise ValueError(f"Number of hole labels ({len(hole_labels)}) must equal number of probes ({len(probe_letters)}).")
         hole_labels, probe_letters = self.__class__.parse_hole_inputs(hole_labels, probe_letters)
         self._probes = tuple(Probe(probe_letter) for probe_letter in probe_letters)
         for k,v in kwargs.items():
@@ -168,7 +165,7 @@ class ProbeGroup(collections.UserDict):
                 f"holes input must be a sequence with the same length as probe_letters, using None entries to fill gaps as required: {len(probe_letters)}: {len(hole_input)=}"
             )
             
-        hole_output:Tuple[Optional[str]]|List[Optional[str]] = []
+        hole_output:Sequence[Optional[str]] = []
             
         # deal with mapping -------------------------------------------------------------------- #
         if isinstance(hole_input,dict):
@@ -193,8 +190,23 @@ class ProbeGroup(collections.UserDict):
         
         return tuple(hole_output), tuple(probe_letters)
     
-    def add_notes_to_probe(self, notes:str, probe_letter:str):
+    @property
+    def notes(self) -> dict:
+        "Notes for each probe"
+        return {p.letter:p.notes for p in self._probes}
+    
+    @notes.setter
+    def notes(self, notes:dict[str,str|None]):
+        if not isinstance(notes,dict):
+            raise TypeError(f"Notes must be a dict `probe_letter:note`: {notes=}, {type(notes)=}")
+        for probe_letter, note in notes.items():
+            self.validate_probe_letter(probe_letter)
+            self.add_notes_to_probe(note, probe_letter)
+            
+    def add_notes_to_probe(self, notes:str|None, probe_letter:str):
         "Add notes to a specific probe"
+        if notes is None:
+            return
         self.validate_probe_letter(probe_letter)
         if not isinstance(notes,str):
             raise TypeError(f"Notes must be a string: {notes=}, {type(notes)=}")
@@ -223,39 +235,77 @@ class ProbeGroup(collections.UserDict):
                 with open(path,'r') as f:
                     data = json.load(f)
                 data[probe_group_name].update(dump[probe_group_name])
-        except:
+            else:
+                raise FileNotFoundError
+        except OSError:
             data = dump
             path.parent.mkdir(parents=True,exist_ok=True)
             
         with open(path,'w') as f:
             json.dump(data,f,indent=4)
+    
+    def load_from_json(self, path:pathlib.Path, probe_group_name:str='probe_group'):
+        "Load probe group from a JSON file."
+        path = pathlib.Path(path).with_suffix('.json')
+        with open(path,'r') as f:
+            data = json.load(f)
+        data = data[probe_group_name]
+        
+        probe_holes = {v['letter']:v['hole'] for k,v in data.items() if k.startswith('probe')}
+        
+        self.__init__(probe_holes)
+        for k,v in data.items():
+            try:
+                self.add_notes_to_probe(v['notes'], v['letter'])
+            except:
+                pass
             
         
 class ProbeInsertionsTS5(ProbeGroup):
     "Record of actual insertions for a given recording."
     
     save_dir = DR_PROBE_INSERTION_RECORDS_DIR
+    probe_group_name = 'probe_insertions'
     
     def __init__(self,*args,**kwargs):
-        super().__init__(*args, probe_letters='ABCDEF',**kwargs)
-            
-    def save(self, day:Literal[1,2,3,4]=None, probe_group_name:str='probe_insertions', path=None, **kwargs):
-        "Write probe info to a JSON file, adding extra fields as kwargs."
+        if not args and 'day' in kwargs:
+            self.load(*args, **kwargs)
+        else:
+            super().__init__(*args, probe_letters='ABCDEF',**kwargs)
+    
+    def filename(self, date:datetime.date, day:Literal[1,2,3,4]=None):
         if not day and hasattr(self,'day'):
             day = self.day
         if not day:
             raise ValueError("Day must be specified")  
-        filename = datetime.datetime.now().strftime("%Y%m%d") + f"_day{day}_probe_insertions.json"
-        if not path:
-            path = self.save_dir / filename
+        return date.strftime("%Y%m%d") + f"_day{day}_probe_insertions.json"
+        
+    def save(self, day:Literal[1,2,3,4]=None, **kwargs):
+        "Write probe info to a JSON file, adding extra fields as kwargs."
+        path = self.save_dir / self.filename(datetime.date.today(), day=day)
         kwargs['implant'] ='TS-5/2002/DR1'
         kwargs['day_1-4'] = day
         super().save_to_json(
             path=path, 
-            probe_group_name=probe_group_name, 
+            probe_group_name=self.probe_group_name, 
             **kwargs
             )
     
+    def load(self, day:Literal[1,2,3,4], date:datetime.date=None, **kwargs):
+        if date is None:
+            date = datetime.date.today()
+        days_prior = 0
+        while days_prior <= date.weekday():
+            try_date = date - datetime.timedelta(days=days_prior)
+            path = self.save_dir / self.filename(date=try_date, day=day)
+            if path.exists():
+                break
+            days_prior += 1
+        else:
+            raise FileNotFoundError(f"No probe insertion records found for day {day} of week {date}")    
+        super().load_from_json(path, probe_group_name=self.probe_group_name, **kwargs)
+        
+        
 class ProbeTargetsFromPlanTS5(ProbeGroup):
     """Insertion targets for a given week, as specified by Corbett's plan.
     
@@ -293,7 +343,7 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
         return 1 + max(0, weeks_since_first_week - cls.skipped_weeks) # minimum of week 1
     
     @classmethod
-    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:int=None) -> Tuple[int,int,int,int,int,int]:
+    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:int=None) -> Tuple[int,...]:
         "Return the target holes for a given day (1-4) and week (1-8), defaulting to week since start of plan"
         if week is None:
             week = cls.get_plan_week()
@@ -303,6 +353,21 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
         week = (week - 1) % 8
         return cls.plan[week][day]
     
+class ExistingProbeRecordFromPlanTS5(ProbeTargetsFromPlanTS5):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    @classmethod
+    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:datetime.date=datetime.date.today()) -> Tuple[int,...]:
+        "Return the targets recorded for a given day (1-4) and week, defined as any day (M-F) around the date supplied - defaulting to today."
+        if any(v == 0 for v in (week, day)):
+            raise ValueError(f"Day and week are 1-indexed: {day=}, {week=} (0 is not allowed)")
+        day = (day - 1) % 2
+        week = (week - 1) % 8
+        return cls.plan[week][day]
+        
+        
 class TS5DrawingSVG:
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image, 
     but not functions for displaying it."""
@@ -402,7 +467,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         
         # interactive display of implant and probe-hole assignments ---------------------------- #
         
-        self.current_insertions:ProbeGroup = ProbeInsertionsTS5(self.initial_targets)
+        self.current_insertions:ProbeGroup = ProbeInsertionsTS5(self.initial_targets, notes=targets.notes)
         "Current probe-hole assignments that can be updated interactively,saved to disk"
         self.implant_drawing = implant_drawing(self.current_insertions)
         "Holds current probe-hole assignments in ProbeGroups and modifies drawing content accordingly"
@@ -544,9 +609,16 @@ class DRWeeklyTargets(ipw.Tab):
         days = (1,2,3,4)
         ui_each_day = []
         for day in days:
+            
+            # try to get previously-saved insertions for this day
+            try:
+                insertions = ProbeInsertionsTS5(day=day) 
+            except FileNotFoundError:
+                insertions = None
+                
             ui_each_day.append(
                 ProbeTargetInsertionRecordWidget(
-                    targets=ProbeTargetsFromPlanTS5(day=day),
+                    targets=insertions or ProbeTargetsFromPlanTS5(day=day),
                     implant_drawing=TS5DrawingSVG,
                     day=day,
                 )
@@ -600,8 +672,8 @@ class DRWeeklyTargetsViewOnly(ipw.Tab):
 
 class CurrentWeek:
     "The current week at runtime: displayed so user can check if GUI needs refreshing"
-    now = datetime.datetime.now()
-    monday = now - datetime.timedelta(days=now.weekday())
+    today = datetime.date.today()
+    monday = today - datetime.timedelta(days=today.weekday())
     friday = monday + datetime.timedelta(days=4)
     DR_plan_week = ProbeTargetsFromPlanTS5.get_plan_week()
     
@@ -617,3 +689,6 @@ class CurrentWeek:
         return IPython.display.display(ipw.HTML(f"<h3>{cls()}</h3>"))
 
 
+if __name__ == "__main__":
+    x = ProbeInsertionsTS5(day=2)
+    print(x.probe)
