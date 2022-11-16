@@ -223,7 +223,9 @@ class ProbeGroup(collections.UserDict):
                 with open(path,'r') as f:
                     data = json.load(f)
                 data[probe_group_name].update(dump[probe_group_name])
-        except:
+            else:
+                raise FileNotFoundError
+        except OSError:
             data = dump
             path.parent.mkdir(parents=True,exist_ok=True)
             
