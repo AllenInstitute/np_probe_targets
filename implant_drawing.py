@@ -569,14 +569,12 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         
     def console_print(self,msg:str):
         with self.output:
-            sys.stdout.write(f"{datetime.datetime.now().strftime('%H:%M:%S')} {msg}\r")
-            sys.stdout.flush()
+            print(f"{datetime.datetime.now().strftime('%H:%M:%S')} {msg}")
 
     def console_clear(self):
         msg =" "*30
         with self.output:
-            sys.stdout.write(f"{msg}\r")
-            sys.stdout.flush()
+            print(f"{msg}")
 
     def save_button_clicked(self, *args, **kwargs):
         if hasattr(self, 'day'):
