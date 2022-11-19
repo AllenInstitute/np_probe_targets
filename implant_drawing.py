@@ -364,20 +364,6 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
         day = (day - 1) % 2
         week = (week - 1) % 8
         return cls.plan[week][day]
-    
-class ExistingProbeRecordFromPlanTS5(ProbeTargetsFromPlanTS5):
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-    @classmethod
-    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:datetime.date=datetime.date.today()) -> Tuple[int,...]:
-        "Return the targets recorded for a given day (1-4) and week, defined as any day (M-F) around the date supplied - defaulting to today."
-        if any(v == 0 for v in (week, day)):
-            raise ValueError(f"Day and week are 1-indexed: {day=}, {week=} (0 is not allowed)")
-        day = (day - 1) % 2
-        week = (week - 1) % 8
-        return cls.plan[week][day]
         
         
 class TS5DrawingSVG:
