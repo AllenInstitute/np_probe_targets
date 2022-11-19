@@ -243,6 +243,22 @@ class ProbeGroup(collections.UserDict):
             
         with open(path,'w') as f:
             json.dump(data,f,indent=4)
+    
+    def load_from_json(self, path:pathlib.Path, probe_group_name:str='probe_group'):
+        "Load probe group from a JSON file."
+        path = pathlib.Path(path).with_suffix('.json')
+        with open(path,'r') as f:
+            data = json.load(f)
+        data = data[probe_group_name]
+        
+        probe_holes = {v['letter']:v['hole'] for k,v in data.items() if k.startswith('probe')}
+        
+        self.__init__(probe_holes)
+        for k,v in data.items():
+            try:
+                self.add_notes_to_probe(v['notes'], v['letter'])
+            except:
+                pass
             
         
 class ProbeInsertionsTS5(ProbeGroup):
@@ -252,8 +268,11 @@ class ProbeInsertionsTS5(ProbeGroup):
     probe_group_name = 'probe_insertions'
     
     def __init__(self,*args,**kwargs):
-        super().__init__(*args, probe_letters='ABCDEF',**kwargs)
-            
+        if not args and 'day' in kwargs:
+            self.load(*args, **kwargs)
+        else:
+            super().__init__(*args, probe_letters='ABCDEF',**kwargs)
+    
     def filename(self, date:datetime.date, day:Literal[1,2,3,4]=None):
         if not day and hasattr(self,'day'):
             day = self.day
@@ -272,6 +291,21 @@ class ProbeInsertionsTS5(ProbeGroup):
             **kwargs
             )
     
+    def load(self, day:Literal[1,2,3,4], date:datetime.date=None, **kwargs):
+        if date is None:
+            date = datetime.date.today()
+        days_prior = 0
+        while days_prior <= date.weekday():
+            try_date = date - datetime.timedelta(days=days_prior)
+            path = self.save_dir / self.filename(date=try_date, day=day)
+            if path.exists():
+                break
+            days_prior += 1
+        else:
+            raise FileNotFoundError(f"No probe insertion records found for day {day} of week {date}")    
+        super().load_from_json(path, probe_group_name=self.probe_group_name, **kwargs)
+        
+        
 class ProbeTargetsFromPlanTS5(ProbeGroup):
     """Insertion targets for a given week, as specified by Corbett's plan.
     
@@ -319,6 +353,21 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
         week = (week - 1) % 8
         return cls.plan[week][day]
     
+class ExistingProbeRecordFromPlanTS5(ProbeTargetsFromPlanTS5):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    @classmethod
+    def targets_by_day_and_week(cls, day:Literal[1,2,3,4], week:datetime.date=datetime.date.today()) -> Tuple[int,...]:
+        "Return the targets recorded for a given day (1-4) and week, defined as any day (M-F) around the date supplied - defaulting to today."
+        if any(v == 0 for v in (week, day)):
+            raise ValueError(f"Day and week are 1-indexed: {day=}, {week=} (0 is not allowed)")
+        day = (day - 1) % 2
+        week = (week - 1) % 8
+        return cls.plan[week][day]
+        
+        
 class TS5DrawingSVG:
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image, 
     but not functions for displaying it."""
@@ -554,15 +603,22 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
 
 class DRWeeklyTargets(ipw.Tab):
     def __init__(self):
-        "Display and edit weekly targets - defaults to current week from plan"
+        
         super().__init__() 
         
         days = (1,2,3,4)
         ui_each_day = []
         for day in days:
+            
+            # try to get previously-saved insertions for this day
+            try:
+                insertions = ProbeInsertionsTS5(day=day) 
+            except FileNotFoundError:
+                insertions = None
+                
             ui_each_day.append(
                 ProbeTargetInsertionRecordWidget(
-                    targets=ProbeTargetsFromPlanTS5(day=day),
+                    targets=insertions or ProbeTargetsFromPlanTS5(day=day),
                     implant_drawing=TS5DrawingSVG,
                     day=day,
                 )
