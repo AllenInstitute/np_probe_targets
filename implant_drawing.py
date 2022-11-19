@@ -465,8 +465,8 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         
         # interactive display of implant and probe-hole assignments ---------------------------- #
         
-        self.current_insertions:ProbeGroup = ProbeInsertionsTS5(self.initial_targets, notes=targets.notes)
-        "Current probe-hole assignments that can be updated interactively,saved to disk"
+        self.current_insertions:ProbeGroup = ProbeInsertionsTS5(dict(targets), notes=targets.notes)
+        "Current probe-hole assignments that can be updated interactively, saved to disk"
         self.implant_drawing = implant_drawing(self.current_insertions)
         "Holds current probe-hole assignments in ProbeGroups and modifies drawing content accordingly"
         
