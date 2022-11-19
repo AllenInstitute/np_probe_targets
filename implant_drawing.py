@@ -462,6 +462,8 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         if kwargs:
             for k,v in kwargs.items():
                 setattr(self, k, v)
+                
+        self.from_record:bool = targets.from_record if hasattr(targets, "from_record") else False
         
         # interactive display of implant and probe-hole assignments ---------------------------- #
         
@@ -533,8 +535,11 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         
         self.output = ipw.Output()
         "Console for displaying messages"
-        self.console_clear()
         
+        self.console_clear()
+        if self.from_record:
+            self.console_print(f"Loaded targets from record.")
+            
         left_box = self.interactive_implant_display
         right_box = ipw.VBox([self.slider_notes_ui, self.button_ui, self.output])
         super().__init__([
