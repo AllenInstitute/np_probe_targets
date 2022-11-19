@@ -270,19 +270,28 @@ class ProbeInsertionsTS5(ProbeGroup):
     def __init__(self,*args,**kwargs):
         if not args and 'day' in kwargs:
             self.load(*args, **kwargs)
+            self._from_record = True
         else:
             super().__init__(*args, probe_letters='ABCDEF',**kwargs)
+            self._from_record = False
+            
+    @property
+    def from_record(self) -> bool:
+        "Whether this probe group was loaded from a record of insertions saved to disk."
+        return self._from_record
     
-    def filename(self, date:datetime.date, day:Literal[1,2,3,4]=None):
-        if not day and hasattr(self,'day'):
+    def filename(self, day:Literal[1,2,3,4]=None, date:datetime.date=None):
+        if day is None and hasattr(self,'day'):
             day = self.day
-        if not day:
+        if day is None:
             raise ValueError("Day must be specified")  
+        if date is None:
+            date = datetime.date.today()
         return date.strftime("%Y%m%d") + f"_day{day}_probe_insertions.json"
         
     def save(self, day:Literal[1,2,3,4]=None, **kwargs):
         "Write probe info to a JSON file, adding extra fields as kwargs."
-        path = self.save_dir / self.filename(datetime.date.today(), day=day)
+        path = self.save_dir / self.filename(day=day)
         kwargs['implant'] ='TS-5/2002/DR1'
         kwargs['day_1-4'] = day
         super().save_to_json(
@@ -291,18 +300,21 @@ class ProbeInsertionsTS5(ProbeGroup):
             **kwargs
             )
     
-    def load(self, day:Literal[1,2,3,4], date:datetime.date=None, **kwargs):
-        if date is None:
-            date = datetime.date.today()
-        days_prior = 0
-        while days_prior <= date.weekday():
-            try_date = date - datetime.timedelta(days=days_prior)
-            path = self.save_dir / self.filename(date=try_date, day=day)
+    def load(self, day:Literal[1,2,3,4], date_in_target_week:datetime.date=None, **kwargs):
+        if date_in_target_week is None:
+            date_in_target_week = datetime.date.today()
+        
+        # actual save date isn't predictable, so we search for a file with the correct
+        # 'day' saved that week, starting on Monday...
+        date_in_target_week -= datetime.timedelta(days=date_in_target_week.weekday())
+        for _ in range(4):
+            date_in_target_week += datetime.timedelta(days=1)
+            path = self.save_dir / self.filename(date=date_in_target_week, day=day)
             if path.exists():
                 break
-            days_prior += 1
         else:
-            raise FileNotFoundError(f"No probe insertion records found for day {day} of week {date}")    
+            raise FileNotFoundError(f"No probe insertion records found for day {day} of week {date_in_target_week}")    
+        
         super().load_from_json(path, probe_group_name=self.probe_group_name, **kwargs)
         
         
