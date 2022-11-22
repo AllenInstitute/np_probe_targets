@@ -308,10 +308,10 @@ class ProbeInsertionsTS5(ProbeGroup):
         # 'day' saved that week, starting on Monday...
         date_in_target_week -= datetime.timedelta(days=date_in_target_week.weekday())
         for _ in range(4):
-            date_in_target_week += datetime.timedelta(days=1)
             path = self.save_dir / self.filename(date=date_in_target_week, day=day)
             if path.exists():
                 break
+            date_in_target_week += datetime.timedelta(days=1)
         else:
             raise FileNotFoundError(f"No probe insertion records found for day {day} of week {date_in_target_week}")    
         
