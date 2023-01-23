@@ -537,8 +537,6 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         "Console for displaying messages"
         
         self.console_clear()
-        if self.from_record:
-            self.console_print(f"Loaded targets from record.")
             
         left_box = self.interactive_implant_display
         right_box = ipw.VBox([self.slider_notes_ui, self.button_ui, self.output])
@@ -549,6 +547,15 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         "Feed all UI elements into superclass widget"
         
         self.layout = ipw.Layout(width='100%')
+        
+        # UI adjustments
+        inputs = [*self.button_ui.children, *self.probe_hole_sliders, *self.note_entry_boxes]
+        if self.from_record:
+            self.console_print(f"Insertion record loaded (read-only).")
+            for input in inputs:
+                input.disabled = True
+                if isinstance(input, ipw.Button):
+                    input.button_style = ''
 
     # end of init - widget returned/displayed ----------------------------------------------- #
             
