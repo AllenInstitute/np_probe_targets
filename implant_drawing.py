@@ -26,7 +26,7 @@ from typing import Dict, List, Literal, Mapping, Optional, Sequence, Tuple
 import IPython
 import ipywidgets as ipw
 
-COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 3
+COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 8
 "Keep a tally of weeks with no DR experiments: increment as needed"
 
 DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
