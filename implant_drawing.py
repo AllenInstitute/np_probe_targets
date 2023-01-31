@@ -13,6 +13,7 @@ Overview of classes
 an implant
 
 """
+from __future__ import annotations
 
 import collections
 import datetime
