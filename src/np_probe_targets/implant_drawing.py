@@ -22,9 +22,8 @@ import json
 import pathlib
 import sys
 from dataclasses import dataclass
-from typing import Mapping, Optional, Sequence
+from typing import Mapping, Optional, Sequence, Literal
 
-from typing_extensions import Literal
 import IPython
 import ipywidgets as ipw
 
