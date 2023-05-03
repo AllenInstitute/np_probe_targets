@@ -226,7 +226,7 @@ class ProbeGroup(collections.UserDict):
             )
 
         # deal with lists ---------------------------------------------------------------------- #
-        elif all(isinstance(i, int | None) for i in hole_input):
+        elif all(isinstance(i, int) or i is None for i in hole_input):
             hole_output = []
             for probe, hole in zip(probe_letters, hole_input):
                 if hole is None:
@@ -234,7 +234,7 @@ class ProbeGroup(collections.UserDict):
                 else:
                     hole_output.append(f"{probe}{hole}")
 
-        elif all(isinstance(i, str | None) for i in hole_input):
+        elif all(isinstance(i, str) or i is None for i in hole_input):
             hole_output = [i for i in hole_input]
 
         # validate labels by attempting to convert label (A1 expected) to probe and hole
