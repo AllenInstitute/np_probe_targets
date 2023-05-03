@@ -616,7 +616,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
     "Displays implant, configurable probe-hole assignments, and buttons for interaction"
 
     def __init__(
-        self, targets: ProbeGroup, implant_drawing=TS5DrawingSVG, *args, **kwargs
+        self, targets: ProbeGroup, implant_drawing=TS5DrawingSVG, current_insertion_group: Type[ProbeGroup] = ProbeInsertionsTS5, *args, **kwargs
     ):
         "Requires targets and a drawing"
 
@@ -633,7 +633,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
 
         # interactive display of implant and probe-hole assignments ---------------------------- #
 
-        self.current_insertions: ProbeGroup = ProbeInsertionsTS5(
+        self.current_insertions: ProbeGroup = current_insertion_group(
             dict(targets), notes=targets.notes
         )
         "Current probe-hole assignments that can be updated interactively, saved to disk"
