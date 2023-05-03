@@ -62,6 +62,26 @@ class TS5(ImplantHoles):
     "Probe letters: A, B, C, D, E, F."
 
 
+class Templeton(ImplantHoles):
+    """Templeton implant - MPE drawing 0283-200-001"""
+    probe_hole_idx = {
+        "A": [1, 2, 3],
+        "B": [1, 2, 3],
+        "C": [1, 2, 3, 4],
+        "D": [1,],
+        "F": [1, 2],
+    }
+    "1-indexed hole indices available for each probe."
+    hole_labels: Tuple[str, ...] = tuple(
+        f"{probe}{index}"
+        for probe, indices in probe_hole_idx.items()
+        for index in indices
+    )
+    "Original labels for each hole: A1, A2, A3, B1, B2, B3, B4, etc."
+    probe_letters: Tuple[str, ...] = tuple(probe_hole_idx.keys())
+    "Probe letters: A, B, C, D, F."
+    
+    
 @dataclass
 class Probe:
     letter: str
