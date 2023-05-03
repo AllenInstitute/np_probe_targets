@@ -93,10 +93,10 @@ class ProbeGroup(collections.UserDict):
     """User-facing container for Probe objects, which may have holes, notes, etc. assigned.
     Behaves like a dictionary of `probe letters : hole labels`."""
 
-    available_hole_labels = TS5.hole_labels
-    "Implant-specific properties - default to TS5 implant."
-    available_probe_letters = TS5.probe_letters
-    "Implant-specific properties - default to TS5 implant."
+    available_hole_labels: tuple[str, ...]
+    "Implant-specific property"
+    available_probe_letters: tuple[str, ...]
+    "Implant-specific property"
 
     def __init__(
         self,
@@ -105,7 +105,7 @@ class ProbeGroup(collections.UserDict):
         **kwargs,
     ):
         "Create a dictionary of probe letters to hole labels"
-        hole_labels, probe_letters = self.__class__.parse_hole_inputs(
+        hole_labels, probe_letters = self.parse_hole_inputs(
             hole_labels, probe_letters
         )
         self._probes = tuple(Probe(probe_letter) for probe_letter in probe_letters)
@@ -134,7 +134,7 @@ class ProbeGroup(collections.UserDict):
 
     def update_probe_holes(self, probe_holes: Mapping):
         "Apply new probe -> hole assignments and sync the dictionary."
-        hole_labels, probe_letters = self.__class__.parse_hole_inputs(probe_holes)
+        hole_labels, probe_letters = self.parse_hole_inputs(probe_holes)
         for probe, hole in dict(zip(probe_letters, hole_labels)).items():
             # update Probe objects
             if hole and hole.lower() == "none":
@@ -317,13 +317,32 @@ class ProbeGroup(collections.UserDict):
                 self.add_notes_to_probe(v["notes"], v["letter"])
             except:
                 pass
+    
+class TS5ProbeGroup(ProbeGroup):
+    """User-facing container for Probe objects, which may have holes, notes, etc. assigned.
+    Behaves like a dictionary of `probe letters : hole labels`."""
 
+    available_hole_labels: tuple[str, ...] = TS5.hole_labels
+    "Implant-specific property"
+    available_probe_letters: tuple[str, ...] = TS5.probe_letters
+    "Implant-specific property"
 
-class ProbeInsertionsTS5(ProbeGroup):
+class TempletonProbeGroup(ProbeGroup):
+    """User-facing container for Probe objects, which may have holes, notes, etc. assigned.
+    Behaves like a dictionary of `probe letters : hole labels`."""
+
+    available_hole_labels: tuple[str, ...] = Templeton.hole_labels
+    "Implant-specific property"
+    available_probe_letters: tuple[str, ...] = Templeton.probe_letters
+    "Implant-specific property"
+    
+
+class ProbeInsertionsTS5(TS5ProbeGroup):
     "Record of actual insertions for a given recording."
 
-    save_dir = DR_PROBE_INSERTION_RECORDS_DIR
+    save_dir: pathlib.Path = DR_PROBE_INSERTION_RECORDS_DIR
     probe_group_name = "probe_insertions"
+
 
     def __init__(self, *args, **kwargs):
         if not args and "day" in kwargs:
@@ -378,7 +397,28 @@ class ProbeInsertionsTS5(ProbeGroup):
         super().load_from_json(path, probe_group_name=self.probe_group_name, **kwargs)
 
 
-class ProbeTargetsFromPlanTS5(ProbeGroup):
+class ProbeInsertionsTempleton(ProbeInsertionsTS5):
+    "Record of actual insertions for a given recording."
+
+    save_dir: pathlib.Path = TEMPLETON_PROBE_INSERTION_RECORDS_DIR
+    
+    available_hole_labels: tuple[str, ...] = Templeton.hole_labels
+    "Implant-specific property"
+    available_probe_letters: tuple[str, ...] = Templeton.probe_letters
+    "Implant-specific property"
+    
+    def save(self, day: Literal[1, 2, 3, 4] = None, **kwargs):
+        "Write probe info to a JSON file, adding extra fields as kwargs."
+        day = self.day if day is None and hasattr(self, "day") else day
+        path = self.save_dir / self.filename(day=day)
+        kwargs["implant"] = "Templeton/v1/0283-200-001"
+        kwargs["day_1-4"] = day
+        super().save_to_json(
+            path=path, probe_group_name=self.probe_group_name, **kwargs
+        )
+        
+    
+class ProbeTargetsFromPlanTS5(TS5ProbeGroup):
     """Insertion targets for a given week, as specified by Corbett's plan.
 
     The plan has 8 weeks, two sets of targets per week:
