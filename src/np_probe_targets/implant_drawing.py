@@ -24,6 +24,7 @@ import sys
 from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence
 
+from typing_extensions import Literal
 import IPython
 import ipywidgets as ipw
 
@@ -339,16 +340,13 @@ class ProbeInsertionsTS5(ProbeGroup):
         return self._from_record
 
     def filename(self, day: Literal[1, 2, 3, 4] = None, date: datetime.date = None):
-        if day is None and hasattr(self, "day"):
-            day = self.day
-        if day is None:
-            raise ValueError("Day must be specified")
         if date is None:
             date = datetime.date.today()
-        return date.strftime("%Y%m%d") + f"_day{day}_probe_insertions.json"
+        return f"{date:%Y%m%d}_{str(day) + '_' if day is not None else ''}probe_insertions.json"
 
     def save(self, day: Literal[1, 2, 3, 4] = None, **kwargs):
         "Write probe info to a JSON file, adding extra fields as kwargs."
+        day = self.day if day is None and hasattr(self, "day") else day
         path = self.save_dir / self.filename(day=day)
         kwargs["implant"] = "TS-5/2002/DR1"
         kwargs["day_1-4"] = day
@@ -405,8 +403,8 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
     skipped_weeks: int = COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN
     "Tally of weeks with no DR exps"
 
-    def __init__(self, day: Literal[1, 2, 3, 4], *args, week: int = None, **kwargs):
-        if not week:
+    def __init__(self, day: Literal[1, 2, 3, 4], *args, week: Optional[int] = None, **kwargs):
+        if week is None:
             week = self.get_plan_week()
         self.week = week
         targets = self.targets_by_day_and_week(week=self.week, day=day)
@@ -549,7 +547,7 @@ class TS5DrawingSVG(DrawingSVG):
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
     but not functions for displaying it."""
 
-    svg_path: pathlib.Path = pathlib.Path("DR1_no_shading.svg").resolve()
+    svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "DR1_no_shading.svg"
     ".svg of first production DR implant, known as DR1, TS-5, 2002, with labels for each hole that designate a probe (A1, B2, etc.)"
     
     implant: ImplantHoles = TS5()
@@ -558,14 +556,14 @@ class TS5DrawingSVG(DrawingSVG):
 class TempletonDrawingSVGProbeColormap(DrawingSVG):
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
     but not functions for displaying it."""
-    svg_path: pathlib.Path = pathlib.Path("Templeton_probes.svg").resolve()
+    svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "Templeton_probes.svg"
     implant: ImplantHoles = Templeton()
     
     
 class TempletonDrawingSVGComboColormap(DrawingSVG):
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
     but not functions for displaying it."""
-    svg_path: pathlib.Path = pathlib.Path("Templeton_combos.svg").resolve()
+    svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "Templeton_combos.svg"
     implant: ImplantHoles = Templeton()
     
     
@@ -724,8 +722,8 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
             print(f"{msg}")
 
     def save_button_clicked(self, *args, **kwargs):
-        if hasattr(self, "day"):
-            day = self.day
+        day = self.day if hasattr(self, "day") else None
+            
         #! notes are not being transferred to Probe class via note_entry_boxes:
         # will manually update notes prior to saving as a temp fix
         for probe, text in zip(self.current_insertions._probes, self.note_entry_boxes):
@@ -750,7 +748,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
 
 
 class DRWeeklyTargets(ipw.Tab):
-    def __init__(self):
+    def __init__(self, week: Optional[int] = None):
 
         super().__init__()
 
@@ -766,7 +764,7 @@ class DRWeeklyTargets(ipw.Tab):
 
             ui_each_day.append(
                 ProbeTargetInsertionRecordWidget(
-                    targets=insertions or ProbeTargetsFromPlanTS5(day=day),
+                    targets=insertions or ProbeTargetsFromPlanTS5(day=day, week=week),
                     implant_drawing=TS5DrawingSVG,
                     day=day,
                 )
