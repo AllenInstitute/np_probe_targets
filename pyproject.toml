@@ -1,15 +1,20 @@
-[tool.poetry]
+[project]
 name = "np_probe_targets"
 version = "0.0.1"
-description = ""
-authors = ["bjhardcastle <ben.hardcastle@alleninstitute.org>"]
-packages = [{include = "np_probe_targets", from = "src"}]
+description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
+authors = [
+    {name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org"},
+]
+dependencies = [
+    "ipywidgets>=8.0.6",
+]
+requires-python = ">=3.8"
+readme = "README.md"
+license = {text = "MIT"}
 
-[tool.poetry.dependencies]
-python = "^3.7"
-
-[tool.poetry.dev-dependencies]
+[tool.pdm.build]
+includes = ["src/np_probe_targets"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
