@@ -22,7 +22,7 @@ import json
 import pathlib
 import sys
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Mapping, Optional, Sequence, Tuple
+from typing import Mapping, Optional, Sequence
 
 import IPython
 import ipywidgets as ipw
@@ -37,7 +37,7 @@ DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
 
 class ImplantHoles:
     "Establishes the labels of available holes for an implant."
-    hole_labels: Tuple
+    hole_labels: tuple[str, ...]
     "Original labels for each hole: e.g. A1, A2, A3, B1, B2, B3, B4, etc."
 
 
@@ -52,13 +52,13 @@ class TS5(ImplantHoles):
         "F": [1, 2, 3],
     }
     "1-indexed hole indices available for each probe."
-    hole_labels: Tuple[str, ...] = tuple(
+    hole_labels: tuple[str, ...] = tuple(
         f"{probe}{index}"
         for probe, indices in probe_hole_idx.items()
         for index in indices
     )
     "Original labels for each hole: A1, A2, A3, B1, B2, B3, B4, etc."
-    probe_letters: Tuple[str, ...] = tuple(probe_hole_idx.keys())
+    probe_letters: tuple[str, ...] = tuple(probe_hole_idx.keys())
     "Probe letters: A, B, C, D, E, F."
 
 
@@ -72,13 +72,13 @@ class Templeton(ImplantHoles):
         "F": [1, 2],
     }
     "1-indexed hole indices available for each probe."
-    hole_labels: Tuple[str, ...] = tuple(
+    hole_labels: tuple[str, ...] = tuple(
         f"{probe}{index}"
         for probe, indices in probe_hole_idx.items()
         for index in indices
     )
     "Original labels for each hole: A1, A2, A3, B1, B2, B3, B4, etc."
-    probe_letters: Tuple[str, ...] = tuple(probe_hole_idx.keys())
+    probe_letters: tuple[str, ...] = tuple(probe_hole_idx.keys())
     "Probe letters: A, B, C, D, F."
     
     
@@ -128,7 +128,7 @@ class ProbeGroup(collections.UserDict):
             self.update_probe_holes(dict(self))
 
     @property
-    def probe(self) -> Dict[str, Probe]:
+    def probe(self) -> dict[str, Probe]:
         "Dictionary of probe letters to Probe objects."
         return dict(zip([probe.letter for probe in self._probes], self._probes))
 
@@ -184,7 +184,7 @@ class ProbeGroup(collections.UserDict):
     @classmethod
     def probe_letter_and_hole_index_from_label(
         cls, label: str
-    ) -> Tuple[str, int] | Tuple[None, None]:
+    ) -> tuple[str, int] | tuple[None, None]:
         "Convert a hole label, e.g. 'A1', to a probe letter and hole index"
         if label is None:
             return None, None
@@ -203,7 +203,7 @@ class ProbeGroup(collections.UserDict):
         cls,
         hole_input: Sequence[str | int | None] | Mapping[str, int | str | None],
         probe_letters: Sequence[str] = None,
-    ) -> Tuple[Tuple[str | None, ...], Tuple[str, ...]]:
+    ) -> tuple[tuple[str | None, ...], tuple[str, ...]]:
         "Convert inputs into a sequence of hole labels, ordered by probe letter."
 
         if probe_letters is None:
@@ -423,7 +423,7 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
     @classmethod
     def targets_by_day_and_week(
         cls, day: Literal[1, 2, 3, 4], week: int = None
-    ) -> Tuple[int, ...]:
+    ) -> tuple[int, ...]:
         "Return the target holes for a given day (1-4) and week (1-8), defaulting to week since start of plan"
         if week is None:
             week = cls.get_plan_week()
@@ -577,8 +577,8 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
     ):
         "Requires targets and a drawing"
 
-        self.initial_targets: Dict[str, str | None] = dict(targets)
-        self.probe_letters: List[str] = list(targets.keys())
+        self.initial_targets: dict[str, str | None] = dict(targets)
+        self.probe_letters: list[str] = list(targets.keys())
 
         if kwargs:
             for k, v in kwargs.items():
