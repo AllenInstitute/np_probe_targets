@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence, Literal, Type
 
-import IPython
+import IPython.display
 import ipywidgets as ipw
 
 COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 8
