@@ -434,18 +434,16 @@ class ProbeTargetsFromPlanTS5(ProbeGroup):
         day = (day - 1) % 2
         week = (week - 1) % 8
         return cls.plan[week][day]
-
-
-class TS5DrawingSVG:
+    
+    
+class DrawingSVG:
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
     but not functions for displaying it."""
 
-    # svg_path:pathlib.Path = pathlib.Path("//allen/programs/mindscope/workgroups/dynamicrouting/ben/implants/DR1.svg")
-    svg_path: pathlib.Path = pathlib.Path("DR1_no_shading.svg").resolve()
-    ".svg of first production DR implant, known as DR1, TS-5, 2002, with labels for each hole that designate a probe (A1, B2, etc.)"
-    svg_data: str = svg_path.open("r").read()
-    "Raw SVG data is XML, which can be parsed or used as a string, updated then displayed as HTML"
-    implant: ImplantHoles = TS5()
+    svg_path: pathlib.Path
+    ".svg of implant"
+    
+    implant: ImplantHoles
 
     def __init__(
         self, probe_hole_assignments: ProbeGroup | Sequence | Mapping = None, **kwargs
@@ -460,10 +458,16 @@ class TS5DrawingSVG:
             )
             "Holes for each probe to be drawn on implant"
         self.previous_probe_hole_assignments: dict[str, str | None] = ProbeGroup(
-            [None] * 6
+            [None] * len(self.current_probe_hole_assignments)
         )
         "Last-known assigned holes, in case we need to 'undo' a probe-hole assignment"
 
+    @classmethod
+    @property
+    def svg_data(cls) -> str:
+        """Raw SVG data is XML, which can be parsed or used as a string, updated then displayed as HTML"""
+        return cls.svg_path.read_text()
+        
     @property
     def drawing_with_current_probe_hole_assignments(self) -> str:
         "Updated SVG code with current target holes"
@@ -493,15 +497,6 @@ class TS5DrawingSVG:
                     f">{textlabel}</tspan>", f"> {probe_letter}</tspan>"
                 )
         return data
-
-    # @property
-    # def hole_label_to_probe_map(self) -> Mapping[str, Optional[str]]:
-    #     "Assigned probe for each hole, e.g. `{'A1': 'A', 'A2': None, 'B2': 'B', ...}`"
-    #     hole_probe:Dict[str,str|None] = dict()
-    #     self.resolve_current_probe_hole_assignments()
-    #     # for probe_letter, hole_label in self.current_probe_hole_assignments.items():
-    #     #     hole_labels[hole_label] = probe_letter
-    #     return dict(self.current_probe_hole_assignments)
 
     def resolve_current_probe_hole_assignments(self):
         "Resolve conflicts, such as multiple probes assigned to the same hole"
@@ -550,6 +545,30 @@ class TS5DrawingSVG:
                 ] = self.current_probe_hole_assignments[probe]
 
 
+class TS5DrawingSVG(DrawingSVG):
+    """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
+    but not functions for displaying it."""
+
+    svg_path: pathlib.Path = pathlib.Path("DR1_no_shading.svg").resolve()
+    ".svg of first production DR implant, known as DR1, TS-5, 2002, with labels for each hole that designate a probe (A1, B2, etc.)"
+    
+    implant: ImplantHoles = TS5()
+    
+    
+class TempletonDrawingSVGProbeColormap(DrawingSVG):
+    """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
+    but not functions for displaying it."""
+    svg_path: pathlib.Path = pathlib.Path("Templeton_probes.svg").resolve()
+    implant: ImplantHoles = Templeton()
+    
+    
+class TempletonDrawingSVGComboColormap(DrawingSVG):
+    """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
+    but not functions for displaying it."""
+    svg_path: pathlib.Path = pathlib.Path("Templeton_combos.svg").resolve()
+    implant: ImplantHoles = Templeton()
+    
+    
 class ProbeTargetInsertionRecordWidget(ipw.HBox):
     "Displays implant, configurable probe-hole assignments, and buttons for interaction"
 
