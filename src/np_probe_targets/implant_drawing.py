@@ -22,7 +22,7 @@ import json
 import pathlib
 import sys
 from dataclasses import dataclass
-from typing import Mapping, Optional, Sequence, Literal
+from typing import Mapping, Optional, Sequence, Literal, Type
 
 import IPython
 import ipywidgets as ipw
@@ -32,6 +32,9 @@ COUNT_OF_SKIPPED_WEEKS_IN_DR_PLAN = 8
 
 DR_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
     "//allen/programs/mindscope/workgroups/dynamicrouting/ben/implants/insertion_records"
+)
+TEMPLETON_PROBE_INSERTION_RECORDS_DIR = pathlib.Path(
+    "//allen/programs/mindscope/workgroups/dynamicrouting/ben/templeton/insertion_records"
 )
 
 
@@ -69,6 +72,7 @@ class Templeton(ImplantHoles):
         "B": [1, 2, 3],
         "C": [1, 2, 3, 4],
         "D": [1,],
+        "E": [],
         "F": [1, 2],
     }
     "1-indexed hole indices available for each probe."
@@ -481,7 +485,8 @@ class DrawingSVG:
     ".svg of implant"
     
     implant: ImplantHoles
-
+    probes: Type[ProbeGroup]
+    
     def __init__(
         self, probe_hole_assignments: ProbeGroup | Sequence | Mapping = None, **kwargs
     ):
@@ -490,18 +495,17 @@ class DrawingSVG:
                 str, str | None
             ] = probe_hole_assignments
         else:
-            self.current_probe_hole_assignments: dict[str, str | None] = ProbeGroup(
+            self.current_probe_hole_assignments: dict[str, str | None] = self.probes(
                 probe_hole_assignments
             )
             "Holes for each probe to be drawn on implant"
-        self.previous_probe_hole_assignments: dict[str, str | None] = ProbeGroup(
+        self.previous_probe_hole_assignments: dict[str, str | None] = self.probes(
             [None] * len(self.current_probe_hole_assignments)
         )
         "Last-known assigned holes, in case we need to 'undo' a probe-hole assignment"
 
     @classmethod
-    @property
-    def svg_data(cls) -> str:
+    def get_svg_data(cls) -> str:
         """Raw SVG data is XML, which can be parsed or used as a string, updated then displayed as HTML"""
         return cls.svg_path.read_text()
         
@@ -509,10 +513,10 @@ class DrawingSVG:
     def drawing_with_current_probe_hole_assignments(self) -> str:
         "Updated SVG code with current target holes"
         self.resolve_current_probe_hole_assignments()
-        return self.__class__.add_probe_hole_assignments_to_svg(
+        return self.add_probe_hole_assignments_to_svg(
             self.current_probe_hole_assignments
         )
-        # return self.__class__.add_probe_hole_assignments_to_svg(self.hole_label_to_probe_map)
+        # return self.add_probe_hole_assignments_to_svg(self.hole_label_to_probe_map)
 
     @classmethod
     def add_probe_hole_assignments_to_svg(
@@ -521,7 +525,7 @@ class DrawingSVG:
         "Add probe-assigned holes to stored SVG data"
         if not isinstance(probe_hole_assignments, ProbeGroup):
             probe_hole_assignments = ProbeGroup(probe_hole_assignments)
-        data: str = cls.svg_data
+        data: str = cls.get_svg_data()
         reverse_mapping = {v: k for k, v in probe_hole_assignments.items()}
 
         for textlabel in cls.implant.hole_labels:
@@ -588,15 +592,16 @@ class TS5DrawingSVG(DrawingSVG):
 
     svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "DR1_no_shading.svg"
     ".svg of first production DR implant, known as DR1, TS-5, 2002, with labels for each hole that designate a probe (A1, B2, etc.)"
-    
     implant: ImplantHoles = TS5()
-    
+    probes: Type[ProbeGroup] = TS5ProbeGroup
+
     
 class TempletonDrawingSVGProbeColormap(DrawingSVG):
     """Functions for controlling and altering graphic representation of ProbeGroups on implant image,
     but not functions for displaying it."""
     svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "Templeton_probes.svg"
     implant: ImplantHoles = Templeton()
+    probes: Type[ProbeGroup] = TempletonProbeGroup
     
     
 class TempletonDrawingSVGComboColormap(DrawingSVG):
@@ -604,6 +609,7 @@ class TempletonDrawingSVGComboColormap(DrawingSVG):
     but not functions for displaying it."""
     svg_path: pathlib.Path = pathlib.Path(__file__).resolve().parent / "Templeton_combos.svg"
     implant: ImplantHoles = Templeton()
+    probes: Type[ProbeGroup] = TempletonProbeGroup
     
     
 class ProbeTargetInsertionRecordWidget(ipw.HBox):
