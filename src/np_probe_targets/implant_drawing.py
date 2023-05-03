@@ -785,7 +785,8 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
 
     def reload_button_clicked(self, *args, **kwargs):
         for probe, slider in zip(self.probe_letters, self.probe_hole_sliders):
-            if hole := self.initial_targets[probe]:
+            hole = self.initial_targets[probe]
+            if hole is not None:
                 slider.value = hole
             else:
                 slider.value = "none"
