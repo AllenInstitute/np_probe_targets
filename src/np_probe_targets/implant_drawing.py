@@ -616,9 +616,14 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
     "Displays implant, configurable probe-hole assignments, and buttons for interaction"
 
     def __init__(
-        self, targets: ProbeGroup, implant_drawing=TS5DrawingSVG, current_insertion_group: Type[ProbeGroup] = ProbeInsertionsTS5, *args, **kwargs
-    ):
-        "Requires targets and a drawing"
+        self,
+        targets: ProbeGroup, 
+        implant_drawing: Type[DrawingSVG] = TS5DrawingSVG,
+        current_insertion_group: Type[ProbeGroup] = ProbeInsertionsTS5,
+        *args, 
+        **kwargs,
+    ) -> None:
+        """Requires targets and a drawing"""
 
         self.initial_targets: dict[str, str | None] = dict(targets)
         self.probe_letters: list[str] = list(targets.keys())
