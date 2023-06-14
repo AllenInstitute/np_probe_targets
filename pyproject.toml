@@ -1,12 +1,12 @@
 [project]
 name = "np_probe_targets"
-version = "0.0.10"
+version = "0.0.11"
 description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
 authors = [
     {name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org"},
 ]
 dependencies = [
-    "ipywidgets<8",
+    "ipywidgets>=7",
 ]
 requires-python = ">=3.8"
 readme = "README.md"
