@@ -754,7 +754,7 @@ class ProbeTargetInsertionRecordWidget(ipw.HBox):
         return self._probe_hole_assignments_display
 
     def update_probe_hole_assignments_display_from_html(self):
-        self.probe_hole_assignments_display_handle.update(
+        self.probe_hole_assignments_display_handle.display(
             ipw.HTML(
                 self.implant_drawing.drawing_with_current_probe_hole_assignments,
                 layout=ipw.Layout(align_content="center", object_fit="scale-down"),
