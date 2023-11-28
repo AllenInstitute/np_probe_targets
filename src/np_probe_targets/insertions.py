@@ -1,5 +1,7 @@
-from collections.abc import Iterator, MutableMapping
-from typing import Any
+from __future__ import annotations
+
+from collections.abc import MutableMapping
+from typing import Any, Iterator
 
 import npc_session
 from typing_extensions import Self
