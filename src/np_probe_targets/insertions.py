@@ -141,7 +141,7 @@ class Insertion:
         """
         return {
             "shield": dict(name=self.shield.name, drawing_id=self.shield.drawing_id),
-            "probes": self.probes,
+            "probes": dict(self.probes),
             "notes": self.notes,
         }
 
