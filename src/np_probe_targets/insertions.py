@@ -160,7 +160,13 @@ class Insertion:
 
 
 class InsertionRecord(Insertion):
-    """A record of a set of probes inserted into a shield in a given session."""
+    """A record of a set of probes inserted into a shield in a given session.
+    
+    >>> i = Insertion(np_probe_targets.shields.DR2002)
+    >>> i.probes["A"] = "A1"
+    >>> i.to_json["probes"]["A"]
+    'A1'
+    """
 
     def __init__(
         self,
