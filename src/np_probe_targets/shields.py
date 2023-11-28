@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import pathlib
-from collections.abc import Iterable, Mapping
+from typing import Iterable, Mapping
 
 import np_probe_targets.types
 
