@@ -1,0 +1,24 @@
+{
+  "shield": {
+    "name": "2002",
+    "drawing_id": "0283-200-002"
+  },
+  "probes": {
+    "A": "A1",
+    "B": null,
+    "C": "C1",
+    "D": "D2",
+    "E": "F1",
+    "F": "F2"
+  },
+  "notes": {
+    "A": null,
+    "B": null,
+    "C": null,
+    "D": null,
+    "E": null,
+    "F": null
+  },
+  "session": "366122_2023-12-01_0",
+  "experiment_day": 1
+}
