@@ -5,7 +5,7 @@ import functools
 import pathlib
 from typing import Iterable, Mapping
 
-import np_probe_targets.types
+import npc_shields.types
 
 DRAWINGS_DIR = pathlib.Path(__file__).parent / "drawings"
 
@@ -100,14 +100,14 @@ DR2005 = Shield(
 
 @functools.cache
 def get_svg_data(
-    shield: np_probe_targets.types.Shield,
+    shield: npc_shields.types.Shield,
 ) -> str:
     return shield.svg.read_text()
 
 
 def get_svg_data_with_insertions(
-    shield: np_probe_targets.types.Shield,
-    insertions: np_probe_targets.types.InsertionProbeMap,
+    shield: npc_shields.types.Shield,
+    insertions: npc_shields.types.InsertionProbeMap,
 ) -> str:
     data: str = get_svg_data(shield)
     reversed_map = {v: k for k, v in insertions.items() if v is not None}
@@ -122,7 +122,7 @@ def get_svg_data_with_insertions(
 
 def get_shield(
     name_or_id: str | int,
-) -> np_probe_targets.types.Shield:
+) -> npc_shields.types.Shield:
     """
     Get an existing shield instance by name or drawing ID.
     
@@ -139,7 +139,7 @@ def get_shield(
     )
 
 
-def get_shields() -> tuple[np_probe_targets.types.Shield, ...]:
+def get_shields() -> tuple[npc_shields.types.Shield, ...]:
     """
     All known shields, sorted by drawing ID.
     
@@ -150,7 +150,7 @@ def get_shields() -> tuple[np_probe_targets.types.Shield, ...]:
             (
                 v
                 for v in globals().values()
-                if isinstance(v, np_probe_targets.types.Shield)
+                if isinstance(v, npc_shields.types.Shield)
             ),
             key=lambda x: x.drawing_id,
         )

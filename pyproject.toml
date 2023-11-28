@@ -1,6 +1,6 @@
 [project]
-name = "np_probe_targets"
-version = "0.0.13"
+name = "npc_shields"
+version = "0.1.0"
 description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
 authors = [
     {name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org"},
@@ -23,11 +23,11 @@ classifiers = [
 ]
 
 [tool.pdm.build]
-includes = ["src/np_probe_targets"]
+includes = ["src/npc_shields"]
 
 [project.urls]
-Repository = "https://github.com/AllenInstitute/np_probe_targets"
-Issues = "https://github.com/AllenInstitute/np_probe_targets/issues"
+Repository = "https://github.com/AllenInstitute/npc_shields"
+Issues = "https://github.com/AllenInstitute/npc_shields/issues"
 
 [build-system]
 requires = [

@@ -10,9 +10,9 @@ import ipywidgets as ipw
 import npc_session
 from typing_extensions import Self
 
-import np_probe_targets.insertions
-import np_probe_targets.shields
-import np_probe_targets.types
+import npc_shields.insertions
+import npc_shields.shields
+import npc_shields.types
 
 
 class InsertionWidget(ipw.HBox):
@@ -22,7 +22,7 @@ class InsertionWidget(ipw.HBox):
     def from_record(cls, json_path: pathlib.Path, **kwargs) -> Self:
         """Load widget from an existing insertion record."""
         return cls(
-            insertion=np_probe_targets.insertions.InsertionRecord.from_json(
+            insertion=npc_shields.insertions.InsertionRecord.from_json(
                 json.loads(json_path.read_text())
             ),
             save_path=json_path,
@@ -31,7 +31,7 @@ class InsertionWidget(ipw.HBox):
 
     def __init__(
         self,
-        insertion: np_probe_targets.types.Insertion,
+        insertion: npc_shields.types.Insertion,
         save_path: str | pathlib.Path,
         read_only: bool = False,
         **hbox_kwargs,
@@ -189,8 +189,8 @@ def get_insertion_widget(
     save_path: pathlib.Path,
 ) -> InsertionWidget:
     return InsertionWidget(
-        insertion=np_probe_targets.insertions.InsertionRecord(
-            shield=np_probe_targets.shields.get_shield(shield_name),
+        insertion=npc_shields.insertions.InsertionRecord(
+            shield=npc_shields.shields.get_shield(shield_name),
             session=session,
             experiment_day=experiment_day,
             probes=None,

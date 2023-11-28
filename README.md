@@ -1,9 +1,13 @@
-# np_probe_targets
+# npc_shields
 
-[![Python
-Versions](https://img.shields.io/pypi/pyversions/np_probe_targets.svg)](https://pypi.python.org/pypi/np-probe-targets/)
+[![PyPI](https://img.shields.io/pypi/v/npc-shields.svg?label=PyPI&color=blue)](https://pypi.org/project/npc-shields/)
+[![Python version](https://img.shields.io/pypi/pyversions/npc-shields)](https://pypi.org/project/npc-shields/)
 
-Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes.
+[![Coverage](https://img.shields.io/codecov/c/github/alleninstitute/npc_shields?logo=codecov)](https://app.codecov.io/github/AllenInstitute/npc_shields)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/alleninstitute/npc_shields/publish.yml?label=CI/CD&logo=github)](https://github.com/alleninstitute/npc_shields/actions/workflows/publish.yml)
+[![GitHub issues](https://img.shields.io/github/issues/alleninstitute/npc_shields?logo=github)](https://github.com/alleninstitute/npc_shields/issues)
+
+Tools for Neuropixels probe insertion into SHIELD implants: providing suggested targets, recording actual insertions, storing notes.
 
 ## creating new implant drawings
 ### export 2D view of 3D model
