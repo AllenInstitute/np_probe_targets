@@ -1,6 +1,6 @@
 [project]
 name = "np_probe_targets"
-version = "0.0.11"
+version = "0.0.13"
 description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
 authors = [
     {name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org"},
