@@ -32,14 +32,14 @@ class InsertionWidget(ipw.HBox):
     def __init__(
         self,
         insertion: np_probe_targets.types.Insertion,
-        save_path: pathlib.Path,
+        save_path: str | pathlib.Path,
         read_only: bool = False,
         **hbox_kwargs,
     ) -> None:
         for k, v in hbox_kwargs.items():
             setattr(self, k, v)
 
-        self.save_path = save_path
+        self.save_path = pathlib.Path(save_path)
         self.insertion = insertion
         self.initial_targets = dict(insertion.probes)
         self.probe_letters = sorted(self.insertion.probes.keys())
@@ -164,7 +164,7 @@ class InsertionWidget(ipw.HBox):
         for probe, text in zip(self.insertion.probes, self.note_entry_boxes):
             self.insertion.notes[probe] = text.value or None
 
-        self.save_path.write_text(json.dumps(self.insertion.to_json()))
+        self.save_path.write_text(json.dumps(self.insertion.to_json(), indent=2))
         self.console_print("Insertions saved.")
 
     def clear_button_clicked(self, *args, **kwargs) -> None:
