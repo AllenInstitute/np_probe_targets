@@ -177,7 +177,7 @@ class InsertionRecord(Insertion):
         notes: dict[str, str | None] | None = None,
     ) -> None:
         super().__init__(shield, probes, notes)
-        self.session = session
+        self.session = npc_session.SessionRecord(session)
         self.experiment_day = experiment_day
 
     @property
