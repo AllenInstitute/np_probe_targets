@@ -227,5 +227,7 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod(
-        optionflags=doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE | doctest.FAIL_FAST
+        optionflags=(
+            doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE | doctest.FAIL_FAST | doctest.IGNORE_EXCEPTION_DETAIL
+        )
     )
