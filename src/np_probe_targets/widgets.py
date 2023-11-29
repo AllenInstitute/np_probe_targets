@@ -232,9 +232,8 @@ def get_insertion_widget(
         save_path=save_path,
     )
 
+
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(
-        optionflags=doctest.FAIL_FAST
-    )
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
