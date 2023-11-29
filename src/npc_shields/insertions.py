@@ -164,7 +164,7 @@ class InsertionRecord(Insertion):
     
     >>> i = Insertion(npc_shields.shields.DR2002)
     >>> i.probes["A"] = "A1"
-    >>> i.to_json["probes"]["A"]
+    >>> i.to_json()["probes"]["A"]
     'A1'
     """
 
