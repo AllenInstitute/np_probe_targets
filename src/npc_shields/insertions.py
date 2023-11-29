@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping
-from typing import Any, Iterator
+from collections.abc import Iterator, MutableMapping
+from typing import Any
 
 import npc_session
 from typing_extensions import Self
@@ -161,7 +161,7 @@ class Insertion:
 
 class InsertionRecord(Insertion):
     """A record of a set of probes inserted into a shield in a given session.
-    
+
     >>> i = Insertion(npc_shields.shields.DR2002)
     >>> i.probes["A"] = "A1"
     >>> i.to_json()["probes"]["A"]
@@ -236,6 +236,9 @@ if __name__ == "__main__":
 
     doctest.testmod(
         optionflags=(
-            doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE | doctest.FAIL_FAST | doctest.IGNORE_EXCEPTION_DETAIL
+            doctest.ELLIPSIS
+            | doctest.NORMALIZE_WHITESPACE
+            | doctest.FAIL_FAST
+            | doctest.IGNORE_EXCEPTION_DETAIL
         )
     )

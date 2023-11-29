@@ -1,9 +1,9 @@
 [project]
 name = "npc_shields"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
 authors = [
-    {name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org"},
+    { name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org" },
 ]
 dependencies = [
     "ipywidgets>=7",
@@ -11,7 +11,6 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 readme = "README.md"
-license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -22,23 +21,21 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 
-[tool.pdm.build]
-includes = ["src/npc_shields"]
+[project.license]
+text = "MIT"
 
 [project.urls]
 Repository = "https://github.com/AllenInstitute/npc_shields"
 Issues = "https://github.com/AllenInstitute/npc_shields/issues"
 
-[build-system]
-requires = [
-    "setuptools>=61",
-    "wheel",
-]
-build-backend = "setuptools.build_meta"
-
 [tool.pdm]
 plugins = [
     "pdm-bump",
+]
+
+[tool.pdm.build]
+includes = [
+    "src/npc_shields",
 ]
 
 [tool.pdm.dev-dependencies]
@@ -186,4 +183,9 @@ no_implicit_optional = true
 show_error_codes = true
 ignore_missing_imports = true
 
-
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"

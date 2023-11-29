@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import pathlib
 import typing
-from typing import Any, Iterable, MutableMapping, Protocol, Union
+from collections.abc import Iterable, MutableMapping
+from typing import Any, Protocol, Union
 
 import npc_session
 from typing_extensions import TypeAlias

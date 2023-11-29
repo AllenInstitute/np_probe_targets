@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 import pathlib
-from typing import Iterable, Mapping
+from collections.abc import Iterable, Mapping
 
 import npc_shields.types
 
@@ -125,8 +125,8 @@ def get_shield(
 ) -> npc_shields.types.Shield:
     """
     Get an existing shield instance by name or drawing ID.
-    
-    >>> x = get_shield("2002") 
+
+    >>> x = get_shield("2002")
     >>> y = get_shield("0283-200-002")
     >>> assert x is y
     """
@@ -142,16 +142,12 @@ def get_shield(
 def get_shields() -> tuple[npc_shields.types.Shield, ...]:
     """
     All known shields, sorted by drawing ID.
-    
+
     >>> x = get_shields()
     """
     return tuple(
         sorted(
-            (
-                v
-                for v in globals().values()
-                if isinstance(v, npc_shields.types.Shield)
-            ),
+            (v for v in globals().values() if isinstance(v, npc_shields.types.Shield)),
             key=lambda x: x.drawing_id,
         )
     )
