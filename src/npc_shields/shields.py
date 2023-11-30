@@ -110,13 +110,19 @@ def get_svg_data_with_insertions(
     insertions: npc_shields.types.InsertionProbeMap,
 ) -> str:
     data: str = get_svg_data(shield)
-    reversed_map = {v: k for k, v in insertions.items() if v is not None}
+    reversed_map = {
+        label: sorted(k for k,v in insertions.items() if v == label)
+        for label in insertions.values()
+        if label is not None
+    }
     for label in shield.labels:
         if label not in insertions.values():
             data = data.replace(f">{label}</tspan>", "></tspan>")
         else:
-            probe_letter = reversed_map[label]
-            data = data.replace(f">{label}</tspan>", f"> {probe_letter}</tspan>")
+            probe_letters = reversed_map[label]
+            data = data.replace(
+                f">{label}</tspan>", f"> {''.join(probe_letters)}</tspan>"
+            )
     return data
 
 

@@ -32,18 +32,6 @@ def validate_probe_insertion(
     for probe, hole in new_insertion.items():
         if hole is None:
             continue
-        if (
-            current_insertion
-            and current_insertion[probe] != hole
-            and hole in current_insertion.values()
-        ):
-            raise OccupiedHoleError(
-                f"{probe=} cannot be assigned to {hole=}: already occupied"
-            )
-        if new_values.count(hole) > 1:
-            raise ValueError(
-                f"Multiple probes cannot be assigned to the same hole: {hole=}"
-            )
         if hole not in shield.labels:
             raise ValueError(
                 f"{probe=} cannot be assigned to {hole=}: not a valid hole in {shield.name=}"
