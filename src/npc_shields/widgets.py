@@ -82,10 +82,7 @@ class InsertionWidget(ipw.HBox):
 
         def update_insertions(**kwargs) -> None:
             "Update probe-hole assignments when sliders are changed"
-            assignments = {
-                k: v if v != "none" else None
-                for k, v in kwargs.items()
-            }
+            assignments = {k: v if v != "none" else None for k, v in kwargs.items()}
             self.insertion.probes.update(assignments)
             self.update_display()
 

@@ -111,7 +111,7 @@ def get_svg_data_with_insertions(
 ) -> str:
     data: str = get_svg_data(shield)
     reversed_map = {
-        label: sorted(k for k,v in insertions.items() if v == label)
+        label: sorted(k for k, v in insertions.items() if v == label)
         for label in insertions.values()
         if label is not None
     }
