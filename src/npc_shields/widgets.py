@@ -1,3 +1,27 @@
+"""
+# Get an implant with suggested targets from a dict
+>>> shield = npc_shields.shields.get_shield('2002')
+>>> suggested_targets = npc_shields.insertions.InsertionRecord(
+...     shield=shield,
+...     probes={
+...         'A': 'A1',
+...         'B': None,
+...         'C': 'C1',
+...         'D': 'D2',
+...         'E': 'F1',
+...         'F': 'F2',
+...     },
+...     session='366122_20231201',
+...     experiment_day=1,
+... )
+>>> w = InsertionWidget(
+...     insertion=suggested_targets,
+...     save_path='example-record.json'
+... ) # doctest: +SKIP
+
+# # Get an implant with suggested targets from a previously-saved record
+# >>> suggested_targets = InsertionWidget.from_record(pathlib.Path('examples/example-record.json'))
+"""
 from __future__ import annotations
 
 import datetime
@@ -188,6 +212,15 @@ def get_insertion_widget(
     experiment_day: int,
     save_path: pathlib.Path,
 ) -> InsertionWidget:
+    # """
+
+    # >>> w = get_insertion_widget(
+    # ...     shield_name='2002',
+    # ...     session='366122_20231201',
+    # ...     experiment_day=1,
+    # ...     save_path=pathlib.Path('examples/example-record.json'),
+    # ... )
+    # """
     return InsertionWidget(
         insertion=npc_shields.insertions.InsertionRecord(
             shield=npc_shields.shields.get_shield(shield_name),
@@ -198,3 +231,9 @@ def get_insertion_widget(
         ),
         save_path=save_path,
     )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
