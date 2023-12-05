@@ -63,13 +63,13 @@ class InsertionWidget(ipw.HBox):
     ) -> None:
         for k, v in hbox_kwargs.items():
             setattr(self, k, v)
-            
+
         if isinstance(save_paths, str):
             save_paths = pathlib.Path(save_paths)
         if not isinstance(save_paths, Iterable):
-            save_paths = (save_paths, )
-        self.save_paths: Iterable[pathlib.Path] = save_paths # type: ignore [assignment]
-        
+            save_paths = (save_paths,)
+        self.save_paths: Iterable[pathlib.Path] = save_paths  # type: ignore [assignment]
+
         self.insertion = insertion
         self.initial_targets = dict(insertion.probes)
         self.probe_letters = sorted(self.insertion.probes.keys())
