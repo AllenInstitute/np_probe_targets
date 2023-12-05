@@ -16,7 +16,7 @@
 ... )
 >>> w = InsertionWidget(
 ...     insertion=suggested_targets,
-...     save_path='example-record.json'
+...     save_paths='example-record.json'
 ... ) # doctest: +SKIP
 
 # # Get an implant with suggested targets from a previously-saved record
@@ -28,6 +28,7 @@ import datetime
 import functools
 import json
 import pathlib
+from collections.abc import Iterable
 
 import IPython.display
 import ipywidgets as ipw
@@ -49,21 +50,26 @@ class InsertionWidget(ipw.HBox):
             insertion=npc_shields.insertions.InsertionRecord.from_json(
                 json.loads(json_path.read_text())
             ),
-            save_path=json_path,
+            save_paths=json_path,
             **kwargs,
         )
 
     def __init__(
         self,
         insertion: npc_shields.types.Insertion,
-        save_path: str | pathlib.Path,
+        save_paths: str | pathlib.Path | Iterable[pathlib.Path],
         read_only: bool = False,
         **hbox_kwargs,
     ) -> None:
         for k, v in hbox_kwargs.items():
             setattr(self, k, v)
-
-        self.save_path = pathlib.Path(save_path)
+            
+        if isinstance(save_paths, str):
+            save_paths = pathlib.Path(save_paths)
+        if not isinstance(save_paths, Iterable):
+            save_paths = (save_paths, )
+        self.save_paths = save_paths
+        
         self.insertion = insertion
         self.initial_targets = dict(insertion.probes)
         self.probe_letters = sorted(self.insertion.probes.keys())
@@ -185,8 +191,9 @@ class InsertionWidget(ipw.HBox):
     def save_button_clicked(self, *args, **kwargs) -> None:
         for probe, text in zip(self.insertion.probes, self.note_entry_boxes):
             self.insertion.notes[probe] = text.value or None
-
-        self.save_path.write_text(json.dumps(self.insertion.to_json(), indent=2))
+        text = json.dumps(self.insertion.to_json(), indent=2)
+        for path in self.save_paths:
+            path.write_text(text)
         self.console_print("Insertions saved.")
 
     def clear_button_clicked(self, *args, **kwargs) -> None:
@@ -208,7 +215,7 @@ def get_insertion_widget(
     shield_name: str,
     session: str | npc_session.SessionRecord,
     experiment_day: int,
-    save_path: pathlib.Path,
+    save_paths: str | pathlib.Path | Iterable[pathlib.Path],
 ) -> InsertionWidget:
     # """
 
@@ -216,7 +223,7 @@ def get_insertion_widget(
     # ...     shield_name='2002',
     # ...     session='366122_20231201',
     # ...     experiment_day=1,
-    # ...     save_path=pathlib.Path('examples/example-record.json'),
+    # ...     save_paths=pathlib.Path('examples/example-record.json'),
     # ... )
     # """
     return InsertionWidget(
@@ -227,7 +234,7 @@ def get_insertion_widget(
             probes=None,
             notes=None,
         ),
-        save_path=save_path,
+        save_paths=save_paths,
     )
 
 
