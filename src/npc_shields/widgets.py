@@ -68,7 +68,7 @@ class InsertionWidget(ipw.HBox):
             save_paths = pathlib.Path(save_paths)
         if not isinstance(save_paths, Iterable):
             save_paths = (save_paths, )
-        self.save_paths = save_paths
+        self.save_paths: Iterable[pathlib.Path] = save_paths # type: ignore [assignment]
         
         self.insertion = insertion
         self.initial_targets = dict(insertion.probes)
