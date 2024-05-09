@@ -4,10 +4,12 @@ Protocols and type aliases for implants and related models, for type-checking (M
 
 from __future__ import annotations
 
+import dataclasses
+import datetime
 import pathlib
 import typing
 from collections.abc import Iterable, MutableMapping
-from typing import Any, Protocol, Union
+from typing import Any, Literal, Protocol, Sequence, Union
 
 import npc_session
 from typing_extensions import TypeAlias
@@ -73,7 +75,6 @@ class Insertion(Protocol):
         """Get a JSON-serializable representation of the insertion."""
         ...
 
-
 class InsertionRecord(Insertion, Protocol):
     """A record of a set of probes inserted into a shield."""
 
@@ -86,3 +87,113 @@ class InsertionRecord(Insertion, Protocol):
     def experiment_day(self) -> int:
         """1-indexed day of experiment for the subject specified in `session`."""
         ...
+
+class Injection(Protocol):
+    """An injection through a hole in a shield at a particular brain location (site + depth).
+    
+    - should allow for no shield (e.g. burr hole)
+    - should record hemisphere
+    - may consist of multiple individual injections
+    """
+
+    @property
+    def shield(self) -> Shield | None:
+        """The shield through which the injection was made."""
+        ...
+
+    @property
+    def location(self) -> str:
+        """The hole in the shield through which the injection was made (e.g. 'C3').
+        
+        - alternatively, a string indicating location of a burr hole or other non-shield location.
+        """
+        ...
+        
+    @property 
+    def hemisphere(self) -> Literal['left', 'right']:
+        """The hemisphere of the brain where the injection was made (e.g. 'left', 'right')."""
+        ...
+    
+    @property
+    def depth_um(self) -> float:
+        """Depth of the injection, in microns from brain surface."""
+        ...
+    
+    @property
+    def fluorescence_nm(self) -> float | None:
+        """Wavelength of fluorescence for the injection."""
+        ...
+        
+    @property
+    def manufacturer(self) -> str | None:
+        """Manufacturer of the injected substance."""
+        ...
+        
+    @property 
+    def substance(self) -> str:
+        """Name of the injected substance."""
+        ...
+        
+    @property 
+    def identifier(self) -> str | None:
+        """Identifier of the injected substance (e.g. manufacture serial number)."""
+        ...
+    
+    @property
+    def concentration_mg_ml(self) -> float | None:
+        """Concentration of the injected substance in milligrams per milliliter."""
+        ...
+    
+    @property
+    def flow_rate_ul_s(self) -> float:
+        """Flow rate of the injection in microliters per second."""
+        ...
+        
+    @property
+    def number_of_injections(self) -> int:
+        """Number of individual injections made at this site + depth."""
+        ...
+        
+    @property
+    def total_volume_ul(self) -> float:
+        """Total volume injected, in microliters."""
+        ...
+        
+    @property
+    def start_time(self) -> datetime.datetime:
+        """Time of the first injection, as a datetime object."""
+        ...
+    
+    @property
+    def is_control(self) -> bool:
+        """Whether the purpose of the injection was a control."""
+        ...
+    
+    @property
+    def notes(self) -> dict[str | npc_session.ProbeRecord, str | None]:
+        """Text notes for the injection."""
+        ...
+
+
+class InjectionRecord(Protocol):
+    """A record of a set of injections in a session."""
+
+    @property
+    def injections(self) -> Sequence[Injection]:
+        """A record of each injection made."""
+        ...
+
+    @property
+    def session(self) -> npc_session.SessionRecord:
+        """Record of the session, including subject, date, session index."""
+        ...
+
+    @property
+    def experiment_day(self) -> int:
+        """1-indexed day of experiment for the subject specified in `session`."""
+        ...
+
+    def to_json(self) -> dict[str, Any]:
+        """Get a JSON-serializable representation of the injections."""
+        ...
+        
