@@ -4,12 +4,11 @@ Protocols and type aliases for implants and related models, for type-checking (M
 
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import pathlib
 import typing
-from collections.abc import Iterable, MutableMapping
-from typing import Any, Literal, Protocol, Sequence, Union
+from collections.abc import Iterable, MutableMapping, Sequence
+from typing import Any, Literal, Protocol, Union
 
 import npc_session
 from typing_extensions import TypeAlias
@@ -47,6 +46,9 @@ class Shield(Protocol):
     def __hash__(self) -> int:
         ...
 
+    def to_json(self) -> dict[str, Any]:
+        """Get a JSON-serializable representation of the shield."""
+        ...
 
 class Insertion(Protocol):
     """A set of probes inserted (or planned to be inserted) into a shield."""
@@ -90,7 +92,7 @@ class InsertionRecord(Insertion, Protocol):
 
 class Injection(Protocol):
     """An injection through a hole in a shield at a particular brain location (site + depth).
-    
+
     - should allow for no shield (e.g. burr hole)
     - should record hemisphere
     - may consist of multiple individual injections
@@ -104,74 +106,100 @@ class Injection(Protocol):
     @property
     def location(self) -> str:
         """The hole in the shield through which the injection was made (e.g. 'C3').
-        
+
         - alternatively, a string indicating location of a burr hole or other non-shield location.
         """
         ...
-        
-    @property 
+
+    @property
+    def location_ap(self) -> float | None:
+        """Distance in millimeters from bregma to injection site along
+        anterior-posterior axis (+ve is anterior)."""
+        ...
+
+    @property
+    def location_ml(self) -> float | None:
+        """Distance in millimeters from brain midline to injection site along
+        medial-lateral axis."""
+        ...
+
+    @property
+    def target_structure(self) -> str:
+        """The intended brain structure for the injection ('VISp' etc.)."""
+        ...
+
+    @property
     def hemisphere(self) -> Literal['left', 'right']:
         """The hemisphere of the brain where the injection was made (e.g. 'left', 'right')."""
         ...
-    
+
     @property
     def depth_um(self) -> float:
         """Depth of the injection, in microns from brain surface."""
         ...
-    
+
     @property
     def fluorescence_nm(self) -> float | None:
         """Wavelength of fluorescence for the injection."""
         ...
-        
+
     @property
     def manufacturer(self) -> str | None:
         """Manufacturer of the injected substance."""
         ...
-        
-    @property 
+
+    @property
     def substance(self) -> str:
         """Name of the injected substance."""
         ...
-        
-    @property 
+
+    @property
     def identifier(self) -> str | None:
         """Identifier of the injected substance (e.g. manufacture serial number)."""
         ...
-    
+
     @property
     def concentration_mg_ml(self) -> float | None:
         """Concentration of the injected substance in milligrams per milliliter."""
         ...
-    
+
     @property
-    def flow_rate_ul_s(self) -> float:
-        """Flow rate of the injection in microliters per second."""
+    def flow_rate_nl_s(self) -> float:
+        """Flow rate of the injection in nanoliters per second."""
         ...
-        
+
     @property
     def number_of_injections(self) -> int:
         """Number of individual injections made at this site + depth."""
         ...
-        
+
     @property
-    def total_volume_ul(self) -> float:
-        """Total volume injected, in microliters."""
+    def total_volume_nl(self) -> float:
+        """Total volume injected, in nanoliters."""
         ...
-        
+
     @property
     def start_time(self) -> datetime.datetime:
         """Time of the first injection, as a datetime object."""
         ...
-    
+
+    @property
+    def is_anaesthetized(self) -> bool:
+        """Whether the subject was anaesthetized during the injection."""
+        ...
+
     @property
     def is_control(self) -> bool:
         """Whether the purpose of the injection was a control."""
         ...
-    
+
     @property
-    def notes(self) -> dict[str | npc_session.ProbeRecord, str | None]:
+    def notes(self) -> str | None:
         """Text notes for the injection."""
+        ...
+        
+    def to_json(self) -> dict[str, Any]:
+        """Get a JSON-serializable representation of the injection."""
         ...
 
 
@@ -194,6 +222,5 @@ class InjectionRecord(Protocol):
         ...
 
     def to_json(self) -> dict[str, Any]:
-        """Get a JSON-serializable representation of the injections."""
+        """Get a JSON-serializable representation of the injections in a session."""
         ...
-        
