@@ -50,6 +50,7 @@ class Shield(Protocol):
         """Get a JSON-serializable representation of the shield."""
         ...
 
+
 class Insertion(Protocol):
     """A set of probes inserted (or planned to be inserted) into a shield."""
 
@@ -77,6 +78,7 @@ class Insertion(Protocol):
         """Get a JSON-serializable representation of the insertion."""
         ...
 
+
 class InsertionRecord(Insertion, Protocol):
     """A record of a set of probes inserted into a shield."""
 
@@ -89,6 +91,7 @@ class InsertionRecord(Insertion, Protocol):
     def experiment_day(self) -> int:
         """1-indexed day of experiment for the subject specified in `session`."""
         ...
+
 
 class Injection(Protocol):
     """An injection through a hole in a shield at a particular brain location (site + depth).
@@ -129,7 +132,7 @@ class Injection(Protocol):
         ...
 
     @property
-    def hemisphere(self) -> Literal['left', 'right']:
+    def hemisphere(self) -> Literal["left", "right"]:
         """The hemisphere of the brain where the injection was made (e.g. 'left', 'right')."""
         ...
 
@@ -197,7 +200,7 @@ class Injection(Protocol):
     def notes(self) -> str | None:
         """Text notes for the injection."""
         ...
-        
+
     def to_json(self) -> dict[str, Any]:
         """Get a JSON-serializable representation of the injection."""
         ...

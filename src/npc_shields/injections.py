@@ -46,7 +46,7 @@ class Injection:
     target_structure: str
     """The intended brain structure for the injection ('VISp' etc.)."""
 
-    hemisphere: Literal['left', 'right']
+    hemisphere: Literal["left", "right"]
     """The hemisphere of the brain where the injection was made ('left' or 'right')."""
 
     depth_um: float
@@ -107,9 +107,10 @@ class Injection:
     def to_json(self) -> dict[str, Any]:
         data = dataclasses.asdict(self)
         if self.shield is not None:
-            data['shield'] = self.shield.to_json()
+            data["shield"] = self.shield.to_json()
         return data
-    
+
+
 @dataclasses.dataclass
 class InjectionRecord:
     """A record of a set of injections.
@@ -140,7 +141,7 @@ class InjectionRecord:
     >>> r.to_json()
     {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': datetime.datetime(2023, 1, 1, 12, 0), 'is_anaesthetized': False, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'number_of_injections': 3, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
     """
-    
+
     injections: Sequence[Injection]
     """A record of each injection made."""
 
@@ -150,15 +151,16 @@ class InjectionRecord:
     experiment_day: int
     """1-indexed day of experiment for the subject specified in `session`."""
 
-
-    def to_json(self)-> dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Get a JSON-serializable representation of the injections."""
         return {
-            'injections': [injection.to_json() for injection in self.injections],
-            'session': self.session,
-            'experiment_day': self.experiment_day,
+            "injections": [injection.to_json() for injection in self.injections],
+            "session": self.session,
+            "experiment_day": self.experiment_day,
         }
+
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
