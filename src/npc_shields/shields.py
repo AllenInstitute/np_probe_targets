@@ -17,6 +17,9 @@ class Shield:
     labels: Iterable[str] = dataclasses.field(repr=False)
     svg: pathlib.Path
 
+    def to_json(self) -> dict[str, str | int]:
+        return dict(name=self.name, drawing_id=self.drawing_id)
+
 
 def get_labels_from_mapping(mapping: Mapping[str, Iterable[int]]) -> tuple[str, ...]:
     """Convert a mapping of probe letter to insertion holes to a tuple of labels.

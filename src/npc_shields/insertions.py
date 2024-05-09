@@ -128,7 +128,7 @@ class Insertion:
         >>> assert j["shield"]["name"] == "2002"
         """
         return {
-            "shield": dict(name=self.shield.name, drawing_id=self.shield.drawing_id),
+            "shield": self.shield.to_json(),
             "probes": dict(self.probes),
             "notes": self.notes,
         }
