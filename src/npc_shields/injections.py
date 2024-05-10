@@ -106,6 +106,7 @@ class Injection:
 
     def to_json(self) -> dict[str, Any]:
         data = dataclasses.asdict(self)
+        data['start_time'] = self.start_time.isoformat()
         if self.shield is not None:
             data["shield"] = self.shield.to_json()
         return data
@@ -139,7 +140,7 @@ class InjectionRecord:
     ...     experiment_day=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': datetime.datetime(2023, 1, 1, 12, 0), 'is_anaesthetized': False, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'number_of_injections': 3, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
+    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01T12:00:00', 'is_anaesthetized': False, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'number_of_injections': 3, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
     """
 
     injections: Sequence[Injection]
