@@ -106,7 +106,7 @@ class Injection:
 
     def to_json(self) -> dict[str, Any]:
         data = dataclasses.asdict(self)
-        data['start_time'] = self.start_time.isoformat()
+        data["start_time"] = self.start_time.isoformat()
         if self.shield is not None:
             data["shield"] = self.shield.to_json()
         return data
