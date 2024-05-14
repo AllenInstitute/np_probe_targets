@@ -72,12 +72,12 @@ class Injection(pydantic.BaseModel):
     flow_rate_nl_s: float
     """Flow rate of the injection in nanoliters per second."""
 
-    start_time: datetime.datetime
+    start_time: datetime.datetime = datetime.datetime.now()
     """Time of the first injection, as a datetime object."""
 
     @pydantic.field_serializer('start_time', when_used='always')
     def serialize_start_time_field(self, start_time: datetime.datetime) -> str:
-        return start_time.isoformat()
+        return start_time.isoformat(sep=' ', timespec='seconds')
 
     is_anaesthetized: bool
     """Whether the subject was anaesthetized during the injection."""
