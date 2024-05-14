@@ -342,6 +342,7 @@ class InjectionWidget(ipw.VBox):
         self.injections.append(injection) # type: ignore [arg-type]
         self.write_record()
         with self.console:
+            self.console.clear_output()
             print(f"Added injection [new total: {len(self.injections)} injections]")
 
     def create_injection_record(self) -> npc_shields.injections.InjectionRecord:
