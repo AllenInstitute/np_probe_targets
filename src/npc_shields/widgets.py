@@ -261,7 +261,7 @@ class InjectionWidget(ipw.VBox):
     ) -> None:
         self.session = session
         self.injection_day = injection_day
-        self.save_paths = save_paths    # type: ignore [assignment]
+        self.save_paths = save_paths  # type: ignore [assignment]
         if shield_name is not None:
             self.shield = npc_shields.shields.get_shield(shield_name)
         else:
@@ -311,7 +311,9 @@ class InjectionWidget(ipw.VBox):
 
         if self.injections:
             with self.console:
-                print(f"Loaded existing injections [total: {len(self.injections)} injections]")
+                print(
+                    f"Loaded existing injections [total: {len(self.injections)} injections]"
+                )
         super().__init__([hbox, self.add_injection_button, self.console], **vbox_kwargs)
 
     @property
@@ -326,8 +328,7 @@ class InjectionWidget(ipw.VBox):
             paths = (paths,)
         paths = (pathlib.Path(path) for path in paths)
         self._save_paths = tuple(
-            path / "injections.json" if path.is_dir() else path
-            for path in paths
+            path / "injections.json" if path.is_dir() else path for path in paths
         )
 
     def _apply_default_injection_values(self) -> None:
@@ -361,7 +362,9 @@ class InjectionWidget(ipw.VBox):
         with self.console:
             self.console.clear_output()
             if current_num_injections == len(self.injections):
-                print(f"Injection already exists for these parameters [total: {len(self.injections)} injections]")
+                print(
+                    f"Injection already exists for these parameters [total: {len(self.injections)} injections]"
+                )
             else:
                 print(f"Added injection [new total: {len(self.injections)} injections]")
 
@@ -371,9 +374,11 @@ class InjectionWidget(ipw.VBox):
             if path.exists():
                 data = json.loads(path.read_text())
                 for injection in data["injections"]:
-                    injection['shield'] = npc_shields.shields.get_shield(injection['shield']["name"])
+                    injection["shield"] = npc_shields.shields.get_shield(
+                        injection["shield"]["name"]
+                    )
                     existing.add(self.injection_cls(**injection))
-        return existing # type: ignore [return-value]
+        return existing  # type: ignore [return-value]
 
     def create_record(self) -> npc_shields.injections.InjectionRecord:
         return npc_shields.injections.InjectionRecord(
