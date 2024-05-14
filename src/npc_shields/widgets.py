@@ -261,7 +261,7 @@ class InjectionWidget(ipw.VBox):
     ) -> None:
         self.session = session
         self.injection_day = injection_day
-        self.save_paths = save_paths
+        self.save_paths = save_paths    # type: ignore [assignment]
         if shield_name is not None:
             self.shield = npc_shields.shields.get_shield(shield_name)
         else:
@@ -365,7 +365,7 @@ class InjectionWidget(ipw.VBox):
             else:
                 print(f"Added injection [new total: {len(self.injections)} injections]")
 
-    def load_existing_injections(self) -> set[npc_shields.injections.Injection]:
+    def load_existing_injections(self) -> set[npc_shields.types.Injection]:
         existing = set()
         for path in self.save_paths:
             if path.exists():
