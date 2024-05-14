@@ -11,6 +11,7 @@ import pydantic
 import npc_shields.shields
 import npc_shields.types
 
+
 class Injection(pydantic.BaseModel):
     """An injection through a hole in a shield at a particular brain location (site + depth).
 
@@ -38,12 +39,15 @@ class Injection(pydantic.BaseModel):
     ...     is_anaesthetized=True,
     ... )
     """
+
     model_config = pydantic.ConfigDict(
         arbitrary_types_allowed=True,
     )
 
-    @pydantic.field_serializer('shield', when_used='always')
-    def serialize_shield_field(self, shield: npc_shields.types.Shield) -> dict[str, Any]:
+    @pydantic.field_serializer("shield", when_used="always")
+    def serialize_shield_field(
+        self, shield: npc_shields.types.Shield
+    ) -> dict[str, Any]:
         return shield.to_json() if shield is not None else None
 
     target_structure: str
@@ -76,9 +80,9 @@ class Injection(pydantic.BaseModel):
     start_time: datetime.datetime = datetime.datetime.now()
     """Time of the first injection, as a datetime object."""
 
-    @pydantic.field_serializer('start_time', when_used='always')
+    @pydantic.field_serializer("start_time", when_used="always")
     def serialize_start_time_field(self, start_time: datetime.datetime) -> str:
-        return start_time.isoformat(sep=' ', timespec='seconds')
+        return start_time.isoformat(sep=" ", timespec="seconds")
 
     is_anaesthetized: bool
     """Whether the subject was anaesthetized during the injection."""

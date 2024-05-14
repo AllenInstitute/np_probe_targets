@@ -24,7 +24,6 @@
 """
 from __future__ import annotations
 
-import collections.abc
 import datetime
 import functools
 import json
@@ -241,15 +240,18 @@ def get_insertion_widget(
         save_paths=save_paths,
     )
 
+
 class InjectionWidget(ipw.VBox):
     """
     A widget for a single session, allowing one or more injections to be added.
     """
+
     injections: list[npc_shields.types.Injection]
     gridspec_kwargs: dict[str, Any]
     shield: npc_shields.types.Shield | None
 
-    def __init__(self,
+    def __init__(
+        self,
         session: str | npc_session.SessionRecord,
         experiment_day: int,
         save_paths: str | pathlib.Path | Iterable[pathlib.Path],
@@ -275,7 +277,7 @@ class InjectionWidget(ipw.VBox):
             if name == "start_time":
                 return "[required] YYYY-MM-DD HH:MM"
             return f"{'[required]' if field.is_required() else ''}"
-        
+
         self.text_entry_boxes = {
             name: ipw.Text(
                 description=name,
@@ -284,9 +286,9 @@ class InjectionWidget(ipw.VBox):
                 continuous_update=True,
                 layout=ipw.Layout(width="100%"),
             )
-                # value=str(getattr(field, "default") or None),
+            # value=str(getattr(field, "default") or None),
             for name, field in self.injection_cls.model_fields.items()
-            if name not in ('shield')
+            if name not in ("shield")
         }
         self._apply_default_injection_values()
         self.text_entry_grid = ipw.GridBox(
@@ -302,20 +304,21 @@ class InjectionWidget(ipw.VBox):
                 )
             )
         hbox = ipw.HBox(hbox_elements)
-        
-        self.add_injection_button = ipw.Button(description="Add this injection", button_style="success", layout=ipw.Layout(width="30%"), tooltip="Append the current set of parameters as a unique injection for this session")
+
+        self.add_injection_button = ipw.Button(
+            description="Add this injection",
+            button_style="success",
+            layout=ipw.Layout(width="30%"),
+            tooltip="Append the current set of parameters as a unique injection for this session",
+        )
         self.add_injection_button.on_click(lambda _: self.append_injection())
         self.console = ipw.Output()
-        
-        super().__init__([
-            hbox, self.add_injection_button, self.console
-            ],
-            **vbox_kwargs
-        )
+
+        super().__init__([hbox, self.add_injection_button, self.console], **vbox_kwargs)
 
     def _apply_default_injection_values(self) -> None:
         for name, field in self.injection_cls.model_fields.items():
-            if name in ('shield'):
+            if name in ("shield"):
                 continue
             if "PydanticUndefined" in field.default.__class__.__name__:
                 self.text_entry_boxes[name].value = ""
@@ -323,41 +326,41 @@ class InjectionWidget(ipw.VBox):
                 self.text_entry_boxes[name].value = ""
             else:
                 self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
-        
+
     def append_injection(self) -> None:
         try:
             injection = self.injection_cls(
-                shield = self.shield,
+                shield=self.shield,
                 **{
                     name: box.value if box.value != "" else None
-                    for name, box 
-                    in self.text_entry_boxes.items()
-                    }
+                    for name, box in self.text_entry_boxes.items()
+                },
             )
         except pydantic.ValidationError as e:
             with self.console:
                 self.console.clear_output()
                 print(f"Error: {e!r}")
             return
-        self.injections.append(injection) # type: ignore [arg-type]
+        self.injections.append(injection)  # type: ignore [arg-type]
         self.write_record()
         with self.console:
             self.console.clear_output()
             print(f"Added injection [new total: {len(self.injections)} injections]")
 
     def create_injection_record(self) -> npc_shields.injections.InjectionRecord:
-            return npc_shields.injections.InjectionRecord(
-                injections=self.injections,
-                session=self.session,
-                experiment_day=self.experiment_day,
-            )
-                
+        return npc_shields.injections.InjectionRecord(
+            injections=self.injections,
+            session=self.session,
+            experiment_day=self.experiment_day,
+        )
+
     def write_record(self) -> None:
         record = self.create_injection_record()
         for path in self.save_paths:
             if path.is_dir():
                 path = path / "injections.json"
             path.write_text(json.dumps(record.to_json(), indent=4))
+
 
 if __name__ == "__main__":
     import doctest
