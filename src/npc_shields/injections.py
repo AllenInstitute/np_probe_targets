@@ -38,8 +38,9 @@ class Injection(pydantic.BaseModel):
     ...     is_anaesthetized=True,
     ... )
     """
-    class Config:
-        arbitrary_types_allowed=True
+    model_config = pydantic.ConfigDict(
+        arbitrary_types_allowed=True,
+    )
 
     @pydantic.field_serializer('shield', when_used='always')
     def serialize_shield_field(self, shield: npc_shields.types.Shield) -> dict[str, Any]:
