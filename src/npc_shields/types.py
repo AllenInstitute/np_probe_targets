@@ -7,7 +7,7 @@ from __future__ import annotations
 import datetime
 import pathlib
 import typing
-from collections.abc import Iterable, MutableMapping, Sequence
+from collections.abc import Iterable, MutableMapping
 from typing import Any, Literal, Protocol, Union
 
 import npc_session
@@ -107,11 +107,8 @@ class Injection(Protocol):
         ...
 
     @property
-    def location(self) -> str | None:
-        """The hole in the shield through which the injection was made (e.g. 'C3').
-
-        - alternatively, a string indicating location of a burr hole or other non-shield location.
-        """
+    def shield_hole(self) -> str | None:
+        """The hole in the shield through which the injection was made (e.g. 'C3')."""
         ...
 
     @property
@@ -172,11 +169,6 @@ class Injection(Protocol):
         ...
 
     @property
-    def number_of_injections(self) -> int:
-        """Number of individual injections made at this site + depth."""
-        ...
-
-    @property
     def total_volume_nl(self) -> float:
         """Total volume injected, in nanoliters."""
         ...
@@ -210,7 +202,7 @@ class InjectionRecord(Protocol):
     """A record of a set of injections in a session."""
 
     @property
-    def injections(self) -> Sequence[Injection]:
+    def injections(self) -> Iterable[Injection]:
         """A record of each injection made."""
         ...
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-from collections.abc import Sequence
+from collections.abc import Iterable
 from typing import Any, Literal
 
 import npc_session
@@ -21,7 +21,7 @@ class Injection(pydantic.BaseModel):
 
     >>> i = Injection(
     ...     shield=npc_shields.shields.DR2002,
-    ...     location="D1",
+    ...     shield_hole="D1",
     ...     target_structure="VISp",
     ...     hemisphere="left",
     ...     depth_um=200,
@@ -33,7 +33,6 @@ class Injection(pydantic.BaseModel):
     ...     flow_rate_nl_s=0.1,
     ...     start_time=datetime.datetime(2023, 1, 1, 12, 0),
     ...     fluorescence_nm=500,
-    ...     number_of_injections=3,
     ...     notes="This was a test injection",
     ...     is_control=False,
     ...     is_anaesthetized=True,
@@ -42,6 +41,8 @@ class Injection(pydantic.BaseModel):
 
     model_config = pydantic.ConfigDict(
         arbitrary_types_allowed=True,
+        extra="allow",
+        frozen=True,
     )
 
     @pydantic.field_serializer("shield", when_used="always")
@@ -87,19 +88,16 @@ class Injection(pydantic.BaseModel):
     is_anaesthetized: bool
     """Whether the subject was anaesthetized during the injection."""
 
-    number_of_injections: int
-    """Number of individual injections made at this site + depth."""
+    is_control: bool
+    """Whether the purpose of the injection was a control."""
 
     # args with defaults ----------------------------------------------- #
 
     shield: npc_shields.types.Shield | None = None
     """The shield through which the injection was made."""
 
-    location: str | None = None
-    """The hole in the shield through which the injection was made (e.g. 'C3').
-
-    - alternatively, a string indicating location of a burr hole or other non-shield location.
-    """
+    shield_hole: str | None = None
+    """The hole in the shield through which the injection was made (e.g. 'C3')."""
 
     location_ap: float | None = None
     """Distance in millimeters from bregma to injection site along
@@ -112,8 +110,6 @@ class Injection(pydantic.BaseModel):
     fluorescence_nm: int | None = None
     """Emission wavelength of the substance injected, if it fluoresces."""
 
-    is_control: bool = False
-    """Whether the purpose of the injection was a control."""
 
     notes: str | None = None
     """Text notes for the injection."""
@@ -139,7 +135,6 @@ class InjectionRecord:
     ...     flow_rate_nl_s=0.1,
     ...     start_time=datetime.datetime(2023, 1, 1, 12, 0),
     ...     fluorescence_nm=500,
-    ...     number_of_injections=3,
     ...     notes="This was a test injection",
     ...     is_control=False,
     ...     is_anaesthetized=False,
@@ -147,19 +142,19 @@ class InjectionRecord:
     >>> r = InjectionRecord(
     ...     injections=[i],
     ...     session="366122_20240101",
-    ...     experiment_day=1,
+    ...     injection_day=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'number_of_injections': 3, 'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
+    {'injections': [{'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
     """
 
-    injections: Sequence[npc_shields.types.Injection]
+    injections: Iterable[npc_shields.types.Injection]
     """A record of each injection made."""
 
     session: str | npc_session.SessionRecord
     """Record of the session, including subject, date, session index."""
 
-    experiment_day: int
+    injection_day: int
     """1-indexed day of experiment for the subject specified in `session`."""
 
     def to_json(self) -> dict[str, Any]:
@@ -167,7 +162,7 @@ class InjectionRecord:
         return {
             "injections": [injection.to_json() for injection in self.injections],
             "session": self.session,
-            "experiment_day": self.experiment_day,
+            "injection_day": self.injection_day,
         }
 
 

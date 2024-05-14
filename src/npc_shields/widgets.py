@@ -246,32 +246,28 @@ class InjectionWidget(ipw.VBox):
     A widget for a single session, allowing one or more injections to be added.
     """
 
-    injections: list[npc_shields.types.Injection]
+    injections: set[npc_shields.types.Injection]
     gridspec_kwargs: dict[str, Any]
     shield: npc_shields.types.Shield | None
 
     def __init__(
         self,
         session: str | npc_session.SessionRecord,
-        experiment_day: int,
+        injection_day: int,
         save_paths: str | pathlib.Path | Iterable[pathlib.Path],
         shield_name: str | None = None,
         injection_cls: type[pydantic.BaseModel] = npc_shields.injections.Injection,
         **vbox_kwargs,
     ) -> None:
         self.session = session
-        self.experiment_day = experiment_day
-        if isinstance(save_paths, str):
-            save_paths = (pathlib.Path(save_paths),)
-        if not isinstance(save_paths, Iterable):
-            save_paths = (save_paths,)
-        self.save_paths: Iterable[pathlib.Path] = save_paths  # type: ignore [assignment]
+        self.injection_day = injection_day
+        self.save_paths = save_paths
         if shield_name is not None:
             self.shield = npc_shields.shields.get_shield(shield_name)
         else:
             self.shield = None
         self.injection_cls = injection_cls
-        self.injections = []
+        self.injections = self.load_existing_injections()
 
         def get_hint(name, field) -> str:
             if name == "start_time":
@@ -286,7 +282,6 @@ class InjectionWidget(ipw.VBox):
                 continuous_update=True,
                 layout=ipw.Layout(width="100%"),
             )
-            # value=str(getattr(field, "default") or None),
             for name, field in self.injection_cls.model_fields.items()
             if name not in ("shield")
         }
@@ -311,10 +306,29 @@ class InjectionWidget(ipw.VBox):
             layout=ipw.Layout(width="30%"),
             tooltip="Append the current set of parameters as a unique injection for this session",
         )
-        self.add_injection_button.on_click(lambda _: self.append_injection())
+        self.add_injection_button.on_click(lambda _: self.add_injection())
         self.console = ipw.Output()
 
+        if self.injections:
+            with self.console:
+                print(f"Loaded existing injections [total: {len(self.injections)} injections]")
         super().__init__([hbox, self.add_injection_button, self.console], **vbox_kwargs)
+
+    @property
+    def save_paths(self) -> tuple[pathlib.Path, ...]:
+        return self._save_paths
+
+    @save_paths.setter
+    def save_paths(self, paths: str | pathlib.Path | Iterable[pathlib.Path]) -> None:
+        if isinstance(paths, str):
+            paths = (pathlib.Path(paths),)
+        if not isinstance(paths, Iterable):
+            paths = (paths,)
+        paths = (pathlib.Path(path) for path in paths)
+        self._save_paths = tuple(
+            path / "injections.json" if path.is_dir() else path
+            for path in paths
+        )
 
     def _apply_default_injection_values(self) -> None:
         for name, field in self.injection_cls.model_fields.items():
@@ -327,7 +341,7 @@ class InjectionWidget(ipw.VBox):
             else:
                 self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
 
-    def append_injection(self) -> None:
+    def add_injection(self) -> None:
         try:
             injection = self.injection_cls(
                 shield=self.shield,
@@ -341,24 +355,36 @@ class InjectionWidget(ipw.VBox):
                 self.console.clear_output()
                 print(f"Error: {e!r}")
             return
-        self.injections.append(injection)  # type: ignore [arg-type]
+        current_num_injections = len(self.injections)
+        self.injections.add(injection)  # type: ignore [arg-type]
         self.write_record()
         with self.console:
             self.console.clear_output()
-            print(f"Added injection [new total: {len(self.injections)} injections]")
+            if current_num_injections == len(self.injections):
+                print(f"Injection already exists for these parameters [total: {len(self.injections)} injections]")
+            else:
+                print(f"Added injection [new total: {len(self.injections)} injections]")
 
-    def create_injection_record(self) -> npc_shields.injections.InjectionRecord:
+    def load_existing_injections(self) -> set[npc_shields.injections.Injection]:
+        existing = set()
+        for path in self.save_paths:
+            if path.exists():
+                data = json.loads(path.read_text())
+                for injection in data["injections"]:
+                    injection['shield'] = npc_shields.shields.get_shield(injection['shield']["name"])
+                    existing.add(self.injection_cls(**injection))
+        return existing # type: ignore [return-value]
+
+    def create_record(self) -> npc_shields.injections.InjectionRecord:
         return npc_shields.injections.InjectionRecord(
             injections=self.injections,
             session=self.session,
-            experiment_day=self.experiment_day,
+            injection_day=self.injection_day,
         )
 
     def write_record(self) -> None:
-        record = self.create_injection_record()
+        record = self.create_record()
         for path in self.save_paths:
-            if path.is_dir():
-                path = path / "injections.json"
             path.write_text(json.dumps(record.to_json(), indent=4))
 
 
