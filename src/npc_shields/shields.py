@@ -131,7 +131,7 @@ def get_svg_data_with_insertions(
 
 def get_shield(
     name_or_id: str | int,
-) -> npc_shields.types.Shield:
+) -> npc_shields.shields.Shield:
     """
     Get an existing shield instance by name or drawing ID.
 
@@ -148,7 +148,7 @@ def get_shield(
     )
 
 
-def get_shields() -> tuple[npc_shields.types.Shield, ...]:
+def get_shields() -> tuple[Shield, ...]:
     """
     All known shields, sorted by drawing ID.
 
@@ -156,7 +156,7 @@ def get_shields() -> tuple[npc_shields.types.Shield, ...]:
     """
     return tuple(
         sorted(
-            (v for v in globals().values() if isinstance(v, npc_shields.types.Shield)),
+            (v for v in globals().values() if isinstance(v, Shield)),
             key=lambda x: x.drawing_id,
         )
     )

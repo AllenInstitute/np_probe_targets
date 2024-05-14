@@ -6,13 +6,12 @@ from collections.abc import Sequence
 from typing import Any, Literal
 
 import npc_session
+import pydantic
 
 import npc_shields.shields
 import npc_shields.types
 
-
-@dataclasses.dataclass(frozen=True, unsafe_hash=True)
-class Injection:
+class Injection(pydantic.BaseModel):
     """An injection through a hole in a shield at a particular brain location (site + depth).
 
     - should allow for no shield (e.g. burr hole)
@@ -39,26 +38,29 @@ class Injection:
     ...     is_anaesthetized=True,
     ... )
     """
+    class Config:
+        arbitrary_types_allowed=True
 
-    shield: npc_shields.types.Shield | None
-    """The shield through which the injection was made."""
+    @pydantic.field_serializer('shield', when_used='always')
+    def serialize_shield(shield: npc_shields.types.Shield) -> dict[str, Any]:
+        return shield.to_json() if shield is not None else None
 
     target_structure: str
     """The intended brain structure for the injection ('VISp' etc.)."""
 
-    hemisphere: Literal["left", "right"]
+    hemisphere: Literal["left", "right"] = "left"
     """The hemisphere of the brain where the injection was made ('left' or 'right')."""
 
     depth_um: float
     """Depth of the injection, in microns from brain surface."""
 
-    substance: str
+    substance: str = "muscimol"
     """Name of the injected substance."""
 
-    manufacturer: str | None
+    manufacturer: str | None = "Sigma-Aldrich"
     """Manufacturer of the injected substance."""
 
-    identifier: str | None
+    identifier: str | None = "M1523"
     """Identifier of the injected substance (e.g. manufacture serial number)."""
 
     total_volume_nl: float
@@ -73,10 +75,20 @@ class Injection:
     start_time: datetime.datetime
     """Time of the first injection, as a datetime object."""
 
+    @pydantic.field_serializer('start_time', when_used='always')
+    def serialize_start_time(start_time: datetime.datetime) -> str:
+        return start_time.isoformat()
+
     is_anaesthetized: bool
     """Whether the subject was anaesthetized during the injection."""
 
+    number_of_injections: int
+    """Number of individual injections made at this site + depth."""
+
     # args with defaults ----------------------------------------------- #
+
+    shield: npc_shields.types.Shield | None = None
+    """The shield through which the injection was made."""
 
     location: str | None = None
     """The hole in the shield through which the injection was made (e.g. 'C3').
@@ -92,11 +104,8 @@ class Injection:
     """Distance in millimeters from brain midline to injection site along
     medial-lateral axis."""
 
-    fluorescence_nm: float | None = None
+    fluorescence_nm: int | None = None
     """Emission wavelength of the substance injected, if it fluoresces."""
-
-    number_of_injections: int = 1
-    """Number of individual injections made at this site + depth."""
 
     is_control: bool = False
     """Whether the purpose of the injection was a control."""
@@ -105,11 +114,7 @@ class Injection:
     """Text notes for the injection."""
 
     def to_json(self) -> dict[str, Any]:
-        data = dataclasses.asdict(self)
-        data["start_time"] = self.start_time.isoformat()
-        if self.shield is not None:
-            data["shield"] = self.shield.to_json()
-        return data
+        return self.model_dump()
 
 
 @dataclasses.dataclass
@@ -140,10 +145,10 @@ class InjectionRecord:
     ...     experiment_day=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01T12:00:00', 'is_anaesthetized': False, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'number_of_injections': 3, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
-    """
+    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01T12:00:00', 'is_anaesthetized': False, 'number_of_injections': 3, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
+"""
 
-    injections: Sequence[Injection]
+    injections: Sequence[npc_shields.types.Injection]
     """A record of each injection made."""
 
     session: str | npc_session.SessionRecord

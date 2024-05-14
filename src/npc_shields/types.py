@@ -107,7 +107,7 @@ class Injection(Protocol):
         ...
 
     @property
-    def location(self) -> str:
+    def location(self) -> str | None:
         """The hole in the shield through which the injection was made (e.g. 'C3').
 
         - alternatively, a string indicating location of a burr hole or other non-shield location.
@@ -142,7 +142,7 @@ class Injection(Protocol):
         ...
 
     @property
-    def fluorescence_nm(self) -> float | None:
+    def fluorescence_nm(self) -> int | None:
         """Wavelength of fluorescence for the injection."""
         ...
 

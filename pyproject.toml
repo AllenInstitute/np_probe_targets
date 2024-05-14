@@ -8,6 +8,7 @@ authors = [
 dependencies = [
     "ipywidgets>=7",
     "npc-session>=0.1.30",
+    "pydantic>=2.7.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"

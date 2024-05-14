@@ -24,17 +24,21 @@
 """
 from __future__ import annotations
 
+import collections.abc
 import datetime
 import functools
 import json
 import pathlib
 from collections.abc import Iterable
+from typing import Any
 
 import IPython.display
 import ipywidgets as ipw
 import npc_session
+import pydantic
 from typing_extensions import Self
 
+import npc_shields.injections
 import npc_shields.insertions
 import npc_shields.shields
 import npc_shields.types
@@ -237,6 +241,122 @@ def get_insertion_widget(
         save_paths=save_paths,
     )
 
+class InjectionWidget(ipw.VBox):
+    """
+    A widget for a single session, allowing one or more injections to be added.
+    """
+    injections: list[npc_shields.types.Injection]
+    gridspec_kwargs: dict[str, Any]
+    shield: npc_shields.types.Shield | None
+
+    def __init__(self,
+        session: str | npc_session.SessionRecord,
+        experiment_day: int,
+        save_paths: str | pathlib.Path | Iterable[pathlib.Path],
+        shield_name: str | None = None,
+        injection_cls: type[pydantic.BaseModel] = npc_shields.injections.Injection,
+        **vbox_kwargs,
+    ) -> None:
+        self.session = session
+        self.experiment_day = experiment_day
+        if isinstance(save_paths, str):
+            save_paths = (pathlib.Path(save_paths),)
+        if not isinstance(save_paths, Iterable):
+            save_paths = (save_paths,)
+        self.save_paths: Iterable[pathlib.Path] = save_paths  # type: ignore [assignment]
+        if shield_name is not None:
+            self.shield = npc_shields.shields.get_shield(shield_name)
+        else:
+            self.shield = None
+        self.injection_cls = injection_cls
+        self.injections = []
+
+        def get_hint(name, field) -> str:
+            if name == "start_time":
+                return "[required] YYYY-MM-DD HH:MM"
+            return f"{'[required]' if field.is_required() else ''}"
+        
+        self.text_entry_boxes = {
+            name: ipw.Text(
+                description=name,
+                placeholder=get_hint(name, field),
+                tooltip=field.description or name,
+                continuous_update=True,
+                layout=ipw.Layout(width="100%"),
+            )
+                # value=str(getattr(field, "default") or None),
+            for name, field in self.injection_cls.model_fields.items()
+            if name not in ('shield')
+        }
+        self._apply_default_injection_values()
+        self.text_entry_grid = ipw.GridBox(
+            [v for v in self.text_entry_boxes.values()],
+        )
+        hbox_elements = [self.text_entry_grid]
+        if self.shield:
+            hbox_elements.append(
+                ipw.HTML(
+                    self.shield.svg.read_text(),
+                    layout=ipw.Layout(align_content="center", object_fit="scale-down"),
+                    # layout not working
+                )
+            )
+        hbox = ipw.HBox(hbox_elements)
+        
+        self.add_injection_button = ipw.Button(description="Add this injection", button_style="success", layout=ipw.Layout(width="30%"), tooltip="Append the current set of parameters as a unique injection for this session")
+        self.add_injection_button.on_click(lambda _: self.append_injection())
+        self.console = ipw.Output()
+        
+        super().__init__([
+            hbox, self.add_injection_button, self.console
+            ],
+            **vbox_kwargs
+        )
+
+    def _apply_default_injection_values(self) -> None:
+        for name, field in self.injection_cls.model_fields.items():
+            if name in ('shield'):
+                continue
+            if "PydanticUndefined" in field.default.__class__.__name__:
+                self.text_entry_boxes[name].value = ""
+            elif field.default is None:
+                self.text_entry_boxes[name].value = ""
+            else:
+                self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
+        
+    def append_injection(self) -> None:
+        try:
+            injection = self.injection_cls(
+                shield = self.shield,
+                **{
+                    name: box.value if box.value != "" else None
+                    for name, box 
+                    in self.text_entry_boxes.items()
+                    }
+            )
+        except pydantic.ValidationError as e:
+            with self.console:
+                self.console.clear_output()
+                print(f"Error: {e!r}")
+            return
+        self.injections.append(injection) # type: ignore [arg-type]
+        self.write_record()
+        with self.console:
+            print(f"Added injection [new total: {len(self.injections)} injections]")
+
+    def create_injection_record(self) -> npc_shields.injections.InjectionRecord:
+            return npc_shields.injections.InjectionRecord(
+                injections=self.injections,
+                session=self.session,
+                experiment_day=self.experiment_day,
+            )
+                
+    def write_record(self) -> None:
+        record = self.create_injection_record()
+        for path in self.save_paths:
+            if path.is_dir():
+                path = path / "injections.json"
+            path.write_text(json.dumps(record.to_json(), indent=4))
 
 if __name__ == "__main__":
     import doctest
