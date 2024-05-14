@@ -45,11 +45,17 @@ class Injection(pydantic.BaseModel):
         frozen=True,
     )
 
+    shield: npc_shields.types.Shield | None = None
+    """The shield through which the injection was made."""
+
     @pydantic.field_serializer("shield", when_used="always")
     def serialize_shield_field(
         self, shield: npc_shields.types.Shield
     ) -> dict[str, Any]:
         return shield.to_json() if shield is not None else None
+
+    shield_hole: str | None = None
+    """The hole in the shield through which the injection was made (e.g. 'C3')."""
 
     target_structure: str
     """The intended brain structure for the injection ('VISp' etc.)."""
@@ -60,8 +66,19 @@ class Injection(pydantic.BaseModel):
     depth_um: float
     """Depth of the injection, in microns from brain surface."""
 
+    location_ap: float | None = None
+    """Distance in millimeters from bregma to injection site along
+    anterior-posterior axis (+ve is anterior)."""
+
+    location_ml: float | None = None
+    """Distance in millimeters from brain midline to injection site along
+    medial-lateral axis."""
+
     substance: str = "muscimol"
     """Name of the injected substance."""
+
+    fluorescence_nm: int | None = None
+    """Emission wavelength of the substance injected, if it fluoresces."""
 
     manufacturer: str | None = "Sigma-Aldrich"
     """Manufacturer of the injected substance."""
@@ -90,26 +107,6 @@ class Injection(pydantic.BaseModel):
 
     is_control: bool
     """Whether the purpose of the injection was a control."""
-
-    # args with defaults ----------------------------------------------- #
-
-    shield: npc_shields.types.Shield | None = None
-    """The shield through which the injection was made."""
-
-    shield_hole: str | None = None
-    """The hole in the shield through which the injection was made (e.g. 'C3')."""
-
-    location_ap: float | None = None
-    """Distance in millimeters from bregma to injection site along
-    anterior-posterior axis (+ve is anterior)."""
-
-    location_ml: float | None = None
-    """Distance in millimeters from brain midline to injection site along
-    medial-lateral axis."""
-
-    fluorescence_nm: int | None = None
-    """Emission wavelength of the substance injected, if it fluoresces."""
-
 
     notes: str | None = None
     """Text notes for the injection."""
@@ -145,7 +142,7 @@ class InjectionRecord:
     ...     injection_day=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'substance': 'Fluorogold', 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'location': None, 'location_ap': None, 'location_ml': None, 'fluorescence_nm': 500, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'experiment_day': 1}
+    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'shield_hole': None, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'location_ap': None, 'location_ml': None, 'substance': 'Fluorogold', 'fluorescence_nm': 500, 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'injection_day': 1}
     """
 
     injections: Iterable[npc_shields.types.Injection]
