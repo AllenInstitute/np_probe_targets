@@ -24,7 +24,11 @@ class Shield:
 
     @property
     def hole_info(self):
-        
+        """
+        >>> shield = Shield("2011", "0283-200-11", ("A1", "A2", "A3", "B1", "B2", "B3", "B4", "C1", "C2", "D1", "E1", "E2", "E3", "F1"), DRAWINGS_DIR / "2011.svg", COORDINATES_DIR / "2011.csv")
+        >>> shield.hole_info['B4']
+        {'Target': 'CP coverage', 'AP': 0.9, 'ML': -2.2}
+        """
         with open(self.csv, newline='') as csvfile:
             creader = csv.reader(csvfile, delimiter=',')
             columns = creader.__next__()
