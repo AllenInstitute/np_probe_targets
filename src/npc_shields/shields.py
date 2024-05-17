@@ -138,7 +138,7 @@ DR2011 = Shield(
     svg=DRAWINGS_DIR / "2011.svg",
     csv=COORDINATES_DIR / "2011.csv",
 )
-"""DR2011 vis ctx and striatum - MPE drawing 0283-200-005"""
+"""DR2011 vis ctx and striatum - MPE drawing 0283-200-11"""
 
 @functools.cache
 def get_svg_data(
