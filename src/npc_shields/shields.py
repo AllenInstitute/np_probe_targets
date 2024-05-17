@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 import npc_shields.types
 
 DRAWINGS_DIR = pathlib.Path(__file__).parent / "drawings"
-
+COORDINATES_DIR = pathlib.Path(__file__).parent / "hole_coordinates"
 
 @dataclasses.dataclass(frozen=True, unsafe_hash=True)
 class Shield:
@@ -16,6 +16,7 @@ class Shield:
     drawing_id: int | str
     labels: Iterable[str] = dataclasses.field(repr=False)
     svg: pathlib.Path
+    csv: pathlib.Path
 
     def to_json(self) -> dict[str, str | int]:
         return dict(name=self.name, drawing_id=self.drawing_id)
@@ -46,8 +47,9 @@ DR2002 = Shield(
         }
     ),
     svg=DRAWINGS_DIR / "2002.svg",
+    csv=COORDINATES_DIR / "2002.csv",
 )
-"""TS5/2002 - MPE drawing 0283-200-002"""
+"""2002 - MPE drawing 0283-200-002"""
 
 TEMPLETON = Shield(
     name="Templeton",  # ? 2001
@@ -63,6 +65,7 @@ TEMPLETON = Shield(
         }
     ),
     svg=DRAWINGS_DIR / "2001.svg",
+    csv=COORDINATES_DIR / "2001.csv",
 )
 """Templeton implant - MPE drawing 0283-200-001"""
 
@@ -80,6 +83,7 @@ DR2006 = Shield(
         }
     ),
     svg=DRAWINGS_DIR / "2006.svg",
+    csv=COORDINATES_DIR / "2006.csv"
 )
 """DR2 rev1/2006 - MPE drawing 0283-200-006"""
 
@@ -97,6 +101,7 @@ DR2005 = Shield(
         }
     ),
     svg=DRAWINGS_DIR / "2005.svg",
+    csv=COORDINATES_DIR / "2005.csv",
 )
 """DR2 rev2/2005 - MPE drawing 0283-200-005"""
 

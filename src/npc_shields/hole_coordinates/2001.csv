@@ -1,0 +1,15 @@
+﻿Hole,Target,AP,ML
+A1,"RSP, MD",-0.7,-0.75
+A2,"ACA, MOs",0.5,-0.75
+A3,"ACA, PL, ILA",1.6,-0.75
+B1,"VISam, LP, CA1",-2.2,-1.6
+B2,"AUDp, AUDd, AUDv, TEa",-1.9,-4
+B3,"RSP, SC, SNr, SNc",-3.1,-1
+C1,"VISp, CA1",-3.9,-2.3
+C2,"AUDp, AUDpo, AUDv, TEa",-2.8,-4
+C3,"RSPd, LD, hipp",-2.05,-0.7
+C4,"VISp, LGN",-3,-2
+D1,"VISli, hipp",-3.7,-3.85
+D2,"VISp, CA1, LGN, VPM",-3.35,-3
+F1,"ACA, PL, ILA",2.6,-0.8
+F2,"ORBl, FRP",2.8,-1.75
