@@ -32,7 +32,7 @@ def validate_probe_insertion(
     for probe, hole in new_insertion.items():
         if hole is None:
             continue
-        if hole not in shield.labels:
+        if hole not in shield.holes:
             raise ValueError(
                 f"{probe=} cannot be assigned to {hole=}: not a valid hole in {shield.name=}"
             )

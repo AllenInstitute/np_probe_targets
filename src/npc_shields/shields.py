@@ -1,44 +1,117 @@
 from __future__ import annotations
 
+import csv
 import dataclasses
 import functools
+from multiprocessing import Value
 import pathlib
 from collections.abc import Iterable, Mapping
-import csv
+from typing import Any
+
+import pydantic
 
 import npc_shields.types
 
 DRAWINGS_DIR = pathlib.Path(__file__).parent / "drawings"
 COORDINATES_DIR = pathlib.Path(__file__).parent / "hole_coordinates"
 
-@dataclasses.dataclass(frozen=True, unsafe_hash=True)
-class Shield:
+class Hole(pydantic.BaseModel):
+    
+    model_config = pydantic.ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="allow",
+        frozen=True,
+    )
+
+    label: str
+    """Label of the hole, as specified in the coords csv & job svg, e.g. 'A1'."""
+
+    target_structure: str | None = None
+    """Intended target structure of the hole, e.g. 'VISp', when the corresponding
+    probe is inserted, e.g. probe B in B1."""
+
+    location_ap: float | None = None
+    """Anterior-posterior distance of the hole, in millimeters, from Bregma
+    (positive is anterior)."""
+
+    location_ml: float | None = None
+    """Medial-lateral distance of the hole, in millimeters, from midline
+    (positive is right hemisphere)."""
+    
+    location_z: float | None = None
+    """Depth of the hole, in millimeters, origin uncertain."""
+
+@functools.cache
+def get_svg_data(
+    shield: npc_shields.types.Shield,
+) -> str:
+    return shield.drawing_svg.read_text()
+
+    
+class Shield(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(
+        arbitrary_types_allowed=True,
+        extra="allow",
+        frozen=True,
+    )
+    
     name: str
     drawing_id: int | str
-    labels: Iterable[str] = dataclasses.field(repr=False)
-    svg: pathlib.Path
-    csv: pathlib.Path
+    drawing_svg: pathlib.Path
+    hole_coordinates_csv: pathlib.Path
 
     def to_json(self) -> dict[str, str | int]:
         return dict(name=self.name, drawing_id=self.drawing_id)
 
     @property
-    def hole_info(self):
-        """
-        >>> shield = Shield("2011", "0283-200-11", ("A1", "A2", "A3", "B1", "B2", "B3", "B4", "C1", "C2", "D1", "E1", "E2", "E3", "F1"), DRAWINGS_DIR / "2011.svg", COORDINATES_DIR / "2011.csv")
-        >>> shield.hole_info['B4']
-        {'Target': 'CP coverage', 'AP': 0.9, 'ML': -2.2}
-        """
-        with open(self.csv, newline='') as csvfile:
-            creader = csv.reader(csvfile, delimiter=',')
-            columns = creader.__next__()
-            column_dtypes = {'AP':float, 'ML':float, 'Target':str}
-            hole_data = {}
-            for row in creader:
-                hole_data[row[0]] = {k:column_dtypes.get(k, str)(v) for k,v in zip(columns[1:], row[1:])}
-        
-        return hole_data
+    def holes(self) -> dict[str, Hole]:
+        return get_holes_from_csv(self.hole_coordinates_csv)
 
+    @pydantic.model_validator(mode='after')
+    def validate_holes_in_svg(self):
+        svg_data = get_svg_data(self)
+        for label in self.holes:
+            if f">{label}</tspan>" not in svg_data:
+                raise ValueError(f"Mismatch between coordinates csv and drawing svg: {label} not found in {self.drawing_svg.name}")
+    
+
+def get_holes_from_csv(csv_path: pathlib.Path) -> dict[str, Hole]:
+    """
+    >>> holes = get_holes_from_csv(COORDINATES_DIR / "2011.csv")
+    >>> holes['B4']
+    Hole(label='B4', target_structure='CP coverage', location_ap=0.9, location_ml=-2.2, location_z=None)
+    
+    # target structure is empty string if not specified in the csv:
+    >>> holes['E2']
+    Hole(label='E2', target_structure='', location_ap=-1.3, location_ml=-3.2, location_z=None)
+    """
+    with open(csv_path, newline='') as csvfile:
+        creader = csv.reader(csvfile, delimiter=',')
+        columns = creader.__next__()
+        # column_dtypes = {'AP': float, 'ML': float, 'Target': str}
+        hole_data: dict[str, Hole] = {}
+        for row in creader:
+            label = row[0]
+            def get_column_idx(name) -> int:
+                idx = next((i for i, col in enumerate(columns) if name.lower() in col.lower()), None)
+                if idx is None:
+                    raise ValueError(f"Column {name!r} not found in csv columns: {columns}")
+                return idx
+            try:
+                target = row[get_column_idx('Target')]
+            except ValueError:
+                target = None
+            hole_data[label] = Hole(
+                label=label,
+                target_structure=target or "",
+                # pydantic will convert these named params to the correct types:
+                location_ap=row[get_column_idx('AP')], # type: ignore[arg-type]
+                location_ml=row[get_column_idx('ML')], # type: ignore[arg-type]
+                # extra columns are will be added as strings:
+                **{c: row[get_column_idx(c)] for c in columns[1:] if c not in ('AP', 'ML', 'Target')} # type: ignore[arg-type]
+            )
+    return hole_data
+    
 def get_labels_from_mapping(mapping: Mapping[str, Iterable[int]]) -> tuple[str, ...]:
     """Convert a mapping of probe letter to insertion holes to a tuple of labels.
 
@@ -53,98 +126,42 @@ def get_labels_from_mapping(mapping: Mapping[str, Iterable[int]]) -> tuple[str, 
 DR2002 = Shield(
     name="2002",
     drawing_id="0283-200-002",
-    labels=get_labels_from_mapping(
-        {
-            "A": (1, 2, 3),
-            "B": (1, 2, 3, 4),
-            "C": (1, 2, 3, 4),
-            "D": (1, 2, 3),
-            "E": (1, 2, 3, 4),
-            "F": (1, 2, 3),
-        }
-    ),
-    svg=DRAWINGS_DIR / "2002.svg",
-    csv=COORDINATES_DIR / "2002.csv",
+    drawing_svg=DRAWINGS_DIR / "2002.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2002.csv",
 )
 """2002 - MPE drawing 0283-200-002"""
 
 TEMPLETON = Shield(
     name="Templeton",  # ? 2001
     drawing_id="0283-200-001",
-    labels=get_labels_from_mapping(
-        {
-            "A": (1, 2, 3),
-            "B": (1, 2, 3),
-            "C": (1, 2, 3, 4),
-            "D": (1,),
-            "E": (),
-            "F": (1, 2),
-        }
-    ),
-    svg=DRAWINGS_DIR / "2001.svg",
-    csv=COORDINATES_DIR / "2001.csv",
+    drawing_svg=DRAWINGS_DIR / "2001.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2001.csv",
 )
 """Templeton implant - MPE drawing 0283-200-001"""
 
 DR2006 = Shield(
     name="2006",
     drawing_id="0283-200-006",
-    labels=get_labels_from_mapping(
-        {
-            "A": (1, 2),
-            "B": (1, 2, 3),
-            "C": (1, 2, 3),
-            "D": (1,),
-            "E": (1, 2, 3),
-            "F": (1, 2),
-        }
-    ),
-    svg=DRAWINGS_DIR / "2006.svg",
-    csv=COORDINATES_DIR / "2006.csv"
+    drawing_svg=DRAWINGS_DIR / "2006.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2006.csv"
 )
 """DR2 rev1/2006 - MPE drawing 0283-200-006"""
 
 DR2005 = Shield(
     name="2005",
     drawing_id="0283-200-005",
-    labels=get_labels_from_mapping(
-        {
-            "A": (1, 2, 3, 4),
-            "B": (1, 2, 3),
-            "C": (1, 2),
-            "D": (1,),
-            "E": (1, 2, 3),
-            "F": (1, 2),
-        }
-    ),
-    svg=DRAWINGS_DIR / "2005.svg",
-    csv=COORDINATES_DIR / "2005.csv",
+    drawing_svg=DRAWINGS_DIR / "2005.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2005.csv",
 )
 """DR2 rev2/2005 - MPE drawing 0283-200-005"""
 
 DR2011 = Shield(
     name="2011",
     drawing_id="0283-200-11",
-    labels=get_labels_from_mapping(
-        {
-            "A": (1, 2, 3),
-            "B": (1, 2, 3, 4),
-            "C": (1, 2),
-            "D": (1,),
-            "E": (1, 2, 3),
-            "F": (1,),
-        }
-    ),
-    svg=DRAWINGS_DIR / "2011.svg",
-    csv=COORDINATES_DIR / "2011.csv",
+    drawing_svg=DRAWINGS_DIR / "2011.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2011.csv",
 )
 """DR2011 vis ctx and striatum - MPE drawing 0283-200-11"""
-
-@functools.cache
-def get_svg_data(
-    shield: npc_shields.types.Shield,
-) -> str:
-    return shield.svg.read_text()
 
 
 def get_svg_data_with_insertions(
@@ -157,7 +174,7 @@ def get_svg_data_with_insertions(
         for label in insertions.values()
         if label is not None
     }
-    for label in shield.labels:
+    for label in shield.holes:
         if label not in insertions.values():
             data = data.replace(f">{label}</tspan>", "></tspan>")
         else:

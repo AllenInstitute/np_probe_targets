@@ -7,7 +7,7 @@ from __future__ import annotations
 import datetime
 import pathlib
 import typing
-from collections.abc import Iterable, MutableMapping
+from collections.abc import Iterable, Mapping, MutableMapping
 from typing import Any, Literal, Protocol, Union
 
 import npc_session
@@ -18,6 +18,27 @@ InsertionProbeMap: TypeAlias = MutableMapping[str, Union[str, None]]
 e.g `{"A": "A1", "B": "B2", "C": None, "D": "E2", "E": "E1", "F": "F1"}`
 """
 
+@typing.runtime_checkable
+class Hole(Protocol):
+    """Info about a hole in a shield, with label and AP/ML coordinates, and other optional params."""
+
+    label: str
+    """Label of the hole, as specified in the coords csv & job svg, e.g. 'A1'."""
+
+    location_ap: float
+    """Anterior-posterior distance of the hole, in millimeters, from Bregma
+    (positive is anterior)."""
+
+    location_ml: float
+    """Medial-lateral distance of the hole, in millimeters, from midline
+    (positive is right hemisphere)."""
+
+    target_structure: str | None
+    """Intended target structure of the hole, e.g. 'VISp', when the corresponding
+    probe is inserted, e.g. probe B in B1."""
+    
+    location_z: float | None
+    """Depth of the hole, in millimeters, origin uncertain."""
 
 @typing.runtime_checkable
 class Shield(Protocol):
@@ -34,13 +55,19 @@ class Shield(Protocol):
         ...
 
     @property
-    def labels(self) -> Iterable[str]:
-        """Original labels for each hole: e.g. A1, A2, A3, B1, B2, B3, B4, etc."""
+    def holes(self) -> Mapping[str, Hole]:
+        """Mapping of hole label to hole info (target, AP, ML)"""
         ...
 
     @property
-    def svg(self) -> pathlib.Path:
+    def drawing_svg(self) -> pathlib.Path:
         """Path to SVG diagram of the shield, with labelled holes as text elements"""
+        ...
+
+    @property
+    def hole_coordinates_csv(self) -> pathlib.Path:
+        """Path to CSV file with coordinates of each hole in the shield
+        (columns: 'Target', 'AP', 'ML')"""
         ...
 
     def __hash__(self) -> int:

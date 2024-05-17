@@ -79,7 +79,7 @@ class InsertionWidget(ipw.HBox):
 
         self.probe_hole_sliders = [
             ipw.SelectionSlider(
-                options=["none", *self.insertion.shield.labels],
+                options=["none", *self.insertion.shield.holes.keys()],
                 value=self.insertion.probes[probe] or "none",
                 description=f"probe {probe}",
                 continuous_update=True,
@@ -293,7 +293,7 @@ class InjectionWidget(ipw.VBox):
         if self.shield:
             hbox_elements.append(
                 ipw.HTML(
-                    self.shield.svg.read_text(),
+                    self.shield.drawing_svg.read_text(),
                     layout=ipw.Layout(align_content="center", object_fit="scale-down"),
                     # layout not working
                 )
