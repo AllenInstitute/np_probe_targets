@@ -4,6 +4,7 @@ import dataclasses
 import functools
 import pathlib
 from collections.abc import Iterable, Mapping
+import csv
 
 import npc_shields.types
 
@@ -21,6 +22,18 @@ class Shield:
     def to_json(self) -> dict[str, str | int]:
         return dict(name=self.name, drawing_id=self.drawing_id)
 
+    @property
+    def hole_info(self):
+        
+        with open(self.csv, newline='') as csvfile:
+            creader = csv.reader(csvfile, delimiter=',')
+            columns = creader.__next__()
+            column_dtypes = {'AP':float, 'ML':float, 'Target':str}
+            hole_data = {}
+            for row in creader:
+                hole_data[row[0]] = {k:column_dtypes.get(k, str)(v) for k,v in zip(columns[1:], row[1:])}
+        
+        return hole_data
 
 def get_labels_from_mapping(mapping: Mapping[str, Iterable[int]]) -> tuple[str, ...]:
     """Convert a mapping of probe letter to insertion holes to a tuple of labels.
@@ -105,6 +118,23 @@ DR2005 = Shield(
 )
 """DR2 rev2/2005 - MPE drawing 0283-200-005"""
 
+DR2011 = Shield(
+    name="2011",
+    drawing_id="0283-200-11",
+    labels=get_labels_from_mapping(
+        {
+            "A": (1, 2, 3),
+            "B": (1, 2, 3, 4),
+            "C": (1, 2),
+            "D": (1,),
+            "E": (1, 2, 3),
+            "F": (1),
+        }
+    ),
+    svg=DRAWINGS_DIR / "2011.svg",
+    csv=COORDINATES_DIR / "2011.csv",
+)
+"""DR2011 vis ctx and striatum - MPE drawing 0283-200-005"""
 
 @functools.cache
 def get_svg_data(
