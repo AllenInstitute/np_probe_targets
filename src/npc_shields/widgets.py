@@ -253,14 +253,14 @@ class InjectionWidget(ipw.VBox):
     def __init__(
         self,
         session: str | npc_session.SessionRecord,
-        injection_day: int,
+        injection_day_index: int,
         save_paths: str | pathlib.Path | Iterable[pathlib.Path],
         shield_name: str | None = None,
         injection_cls: type[pydantic.BaseModel] = npc_shields.injections.Injection,
         **vbox_kwargs,
     ) -> None:
         self.session = session
-        self.injection_day = injection_day
+        self.injection_day_index = injection_day_index
         self.save_paths = save_paths  # type: ignore [assignment]
         if shield_name is not None:
             self.shield = npc_shields.shields.get_shield(shield_name)
@@ -384,7 +384,7 @@ class InjectionWidget(ipw.VBox):
         return npc_shields.injections.InjectionRecord(
             injections=self.injections,
             session=self.session,
-            injection_day=self.injection_day,
+            injection_day_index=self.injection_day_index,
         )
 
     def write_record(self) -> None:

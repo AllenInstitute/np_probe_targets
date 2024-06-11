@@ -114,7 +114,6 @@ class Injection(pydantic.BaseModel):
     def to_json(self) -> dict[str, Any]:
         return self.model_dump()
 
-
 @dataclasses.dataclass
 class InjectionRecord:
     """A record of a set of injections.
@@ -139,10 +138,10 @@ class InjectionRecord:
     >>> r = InjectionRecord(
     ...     injections=[i],
     ...     session="366122_20240101",
-    ...     injection_day=1,
+    ...     injection_day_index=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'shield_hole': None, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'location_ap': None, 'location_ml': None, 'substance': 'Fluorogold', 'fluorescence_nm': 500, 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'injection_day': 1}
+    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'shield_hole': None, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'location_ap': None, 'location_ml': None, 'substance': 'Fluorogold', 'fluorescence_nm': 500, 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'injection_day_index': 1}
     """
 
     injections: Iterable[npc_shields.types.Injection]
@@ -151,7 +150,7 @@ class InjectionRecord:
     session: str | npc_session.SessionRecord
     """Record of the session, including subject, date, session index."""
 
-    injection_day: int
+    injection_day_index: int
     """1-indexed day of experiment for the subject specified in `session`."""
 
     def to_json(self) -> dict[str, Any]:
@@ -159,7 +158,7 @@ class InjectionRecord:
         return {
             "injections": [injection.to_json() for injection in self.injections],
             "session": self.session,
-            "injection_day": self.injection_day,
+            "injection_day_index": self.injection_day_index,
         }
 
 
