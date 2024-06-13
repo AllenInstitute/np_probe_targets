@@ -25,11 +25,11 @@ class Hole(Protocol):
     label: str
     """Label of the hole, as specified in the coords csv & job svg, e.g. 'A1'."""
 
-    location_ap: float
+    location_ap: float | None 
     """Anterior-posterior distance of the hole, in millimeters, from Bregma
     (positive is anterior)."""
 
-    location_ml: float
+    location_ml: float | None 
     """Medial-lateral distance of the hole, in millimeters, from midline
     (positive is right hemisphere)."""
 
