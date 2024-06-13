@@ -12,8 +12,8 @@ import npc_shields.types
 DRAWINGS_DIR = pathlib.Path(__file__).parent / "drawings"
 COORDINATES_DIR = pathlib.Path(__file__).parent / "hole_coordinates"
 
+
 class Hole(pydantic.BaseModel):
-    
     model_config = pydantic.ConfigDict(
         arbitrary_types_allowed=True,
         extra="allow",
@@ -34,9 +34,10 @@ class Hole(pydantic.BaseModel):
     location_ml: float | None = None
     """Medial-lateral distance of the hole, in millimeters, from midline
     (positive is right hemisphere)."""
-    
+
     location_z: float | None = None
     """Depth of the hole, in millimeters, origin uncertain."""
+
 
 @functools.cache
 def get_svg_data(
@@ -44,14 +45,14 @@ def get_svg_data(
 ) -> str:
     return shield.drawing_svg.read_text()
 
-    
+
 class Shield(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(
         arbitrary_types_allowed=True,
         extra="allow",
         frozen=True,
     )
-    
+
     name: str
     drawing_id: int | str
     drawing_svg: pathlib.Path
@@ -64,51 +65,61 @@ class Shield(pydantic.BaseModel):
     def holes(self) -> dict[str, Hole]:
         return get_holes_from_csv(self.hole_coordinates_csv)
 
-    @pydantic.model_validator(mode='after')
+    @pydantic.model_validator(mode="after")
     def validate_holes_in_svg(self):
         svg_data = get_svg_data(self)
         for label in self.holes:
             if f">{label}</tspan>" not in svg_data:
-                raise ValueError(f"Mismatch between coordinates csv and drawing svg: {label} not found in {self.drawing_svg.name}")
-    
+                raise ValueError(
+                    f"Mismatch between coordinates csv and drawing svg: {label} not found in {self.drawing_svg.name}"
+                )
+
 
 def get_holes_from_csv(csv_path: pathlib.Path) -> dict[str, Hole]:
     """
     >>> holes = get_holes_from_csv(COORDINATES_DIR / "2011.csv")
     >>> holes['B4']
     Hole(label='B4', target_structure='CP coverage', location_ap=0.9, location_ml=-2.2, location_z=None)
-    
+
     # target structure is empty string if not specified in the csv:
     >>> holes['E2']
     Hole(label='E2', target_structure='', location_ap=-1.3, location_ml=-3.2, location_z=None)
     """
-    with open(csv_path, newline='') as csvfile:
-        creader = csv.reader(csvfile, delimiter=',')
+    with open(csv_path, newline="") as csvfile:
+        creader = csv.reader(csvfile, delimiter=",")
         columns = creader.__next__()
         # column_dtypes = {'AP': float, 'ML': float, 'Target': str}
         hole_data: dict[str, Hole] = {}
         for row in creader:
             label = row[0]
+
             def get_column_idx(name) -> int:
-                idx = next((i for i, col in enumerate(columns) if name.lower() in col.lower()), None)
+                idx = next(
+                    (i for i, col in enumerate(columns) if name.lower() in col.lower()),
+                    None,
+                )
                 if idx is None:
-                    raise ValueError(f"Column {name!r} not found in csv columns: {columns}")
+                    raise ValueError(
+                        f"Column {name!r} not found in csv columns: {columns}"
+                    )
                 return idx
+
             try:
-                target = row[get_column_idx('Target')]
+                target = row[get_column_idx("Target")]
             except ValueError:
                 target = None
             hole_data[label] = Hole(
                 label=label,
                 target_structure=target or "",
                 # pydantic will convert these named params to the correct types:
-                location_ap=row[get_column_idx('AP')], # type: ignore[arg-type]
-                location_ml=row[get_column_idx('ML')], # type: ignore[arg-type]
+                location_ap=row[get_column_idx("AP")],  # type: ignore[arg-type]
+                location_ml=row[get_column_idx("ML")],  # type: ignore[arg-type]
                 # extra columns are will be added as strings:
-                **{c: row[get_column_idx(c)] for c in columns[1:] if c not in ('AP', 'ML', 'Target')} # type: ignore[arg-type]
+                **{c: row[get_column_idx(c)] for c in columns[1:] if c not in ("AP", "ML", "Target")},  # type: ignore[arg-type]
             )
     return hole_data
-    
+
+
 def get_labels_from_mapping(mapping: Mapping[str, Iterable[int]]) -> tuple[str, ...]:
     """Convert a mapping of probe letter to insertion holes to a tuple of labels.
 
@@ -140,7 +151,7 @@ DR2006 = Shield(
     name="2006",
     drawing_id="0283-200-006",
     drawing_svg=DRAWINGS_DIR / "2006.svg",
-    hole_coordinates_csv=COORDINATES_DIR / "2006.csv"
+    hole_coordinates_csv=COORDINATES_DIR / "2006.csv",
 )
 """DR2 rev1/2006 - MPE drawing 0283-200-006"""
 

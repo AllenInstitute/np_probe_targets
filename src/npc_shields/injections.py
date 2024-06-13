@@ -114,6 +114,7 @@ class Injection(pydantic.BaseModel):
     def to_json(self) -> dict[str, Any]:
         return self.model_dump()
 
+
 @dataclasses.dataclass
 class InjectionRecord:
     """A record of a set of injections.

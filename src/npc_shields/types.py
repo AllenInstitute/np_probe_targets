@@ -18,6 +18,7 @@ InsertionProbeMap: TypeAlias = MutableMapping[str, Union[str, None]]
 e.g `{"A": "A1", "B": "B2", "C": None, "D": "E2", "E": "E1", "F": "F1"}`
 """
 
+
 @typing.runtime_checkable
 class Hole(Protocol):
     """Info about a hole in a shield, with label and AP/ML coordinates, and other optional params."""
@@ -25,20 +26,21 @@ class Hole(Protocol):
     label: str
     """Label of the hole, as specified in the coords csv & job svg, e.g. 'A1'."""
 
-    location_ap: float | None 
+    location_ap: float | None
     """Anterior-posterior distance of the hole, in millimeters, from Bregma
     (positive is anterior)."""
 
-    location_ml: float | None 
+    location_ml: float | None
     """Medial-lateral distance of the hole, in millimeters, from midline
     (positive is right hemisphere)."""
 
     target_structure: str | None
     """Intended target structure of the hole, e.g. 'VISp', when the corresponding
     probe is inserted, e.g. probe B in B1."""
-    
+
     location_z: float | None
     """Depth of the hole, in millimeters, origin uncertain."""
+
 
 @typing.runtime_checkable
 class Shield(Protocol):
