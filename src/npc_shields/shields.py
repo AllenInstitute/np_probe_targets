@@ -184,7 +184,7 @@ def get_svg_data_with_insertions(
 
 def get_shield(
     name_or_id: str | int,
-) -> npc_shields.shields.Shield:
+) -> Shield:
     """
     Get an existing shield instance by name or drawing ID.
 
