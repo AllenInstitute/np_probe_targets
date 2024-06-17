@@ -97,6 +97,7 @@ where = [
 "*" = [
     "py.typed",
     "*.svg",
+    "*.csv",
 ]
 
 [tool.ruff]
