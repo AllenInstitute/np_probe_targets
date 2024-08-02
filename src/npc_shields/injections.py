@@ -31,11 +31,14 @@ class Injection(pydantic.BaseModel):
     ...     total_volume_nl=1.0,
     ...     concentration_mg_ml=10.0,
     ...     flow_rate_nl_s=0.1,
+    ...     pipette_inner_diameter_um=22.88,
     ...     start_time=datetime.datetime(2023, 1, 1, 12, 0),
+    ...     settle_time_s=60,
     ...     fluorescence_nm=500,
     ...     notes="This was a test injection",
     ...     is_control=False,
     ...     is_anaesthetized=True,
+    ...     is_mixed_correctly=True,
     ... )
     """
 
@@ -102,11 +105,20 @@ class Injection(pydantic.BaseModel):
     def serialize_start_time_field(self, start_time: datetime.datetime) -> str:
         return start_time.isoformat(sep=" ", timespec="seconds")
 
+    settle_time_s: float | None = None
+    """Time waited after injection before changing depth, in seconds."""
+    
+    pipette_inner_diameter_um: float | None = None
+    """Inner diameter of the pipette used for the injection, in microns."""
+
     is_anaesthetized: bool
     """Whether the subject was anaesthetized during the injection."""
 
     is_control: bool
     """Whether the purpose of the injection was a control."""
+    
+    is_mixed_correctly: bool | None = None
+    """An early batch of muscimol may not have been mixed correctly"""
 
     notes: str | None = None
     """Text notes for the injection."""
