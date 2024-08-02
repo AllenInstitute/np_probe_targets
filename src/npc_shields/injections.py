@@ -154,7 +154,7 @@ class InjectionRecord:
     ...     injection_day_index=1,
     ... )
     >>> r.to_json()
-    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'shield_hole': None, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'location_ap': None, 'location_ml': None, 'substance': 'Fluorogold', 'fluorescence_nm': 500, 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'is_anaesthetized': False, 'is_control': False, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'injection_day_index': 1}
+    {'injections': [{'shield': {'name': '2002', 'drawing_id': '0283-200-002'}, 'shield_hole': None, 'target_structure': 'VISp', 'hemisphere': 'left', 'depth_um': 3000.0, 'location_ap': None, 'location_ml': None, 'substance': 'Fluorogold', 'fluorescence_nm': 500, 'manufacturer': 'Sigma', 'identifier': '12345', 'total_volume_nl': 1.0, 'concentration_mg_ml': 10.0, 'flow_rate_nl_s': 0.1, 'start_time': '2023-01-01 12:00:00', 'settle_time_s': None, 'pipette_inner_diameter_um': None, 'is_anaesthetized': False, 'is_control': False, 'is_mixed_correctly': None, 'notes': 'This was a test injection'}], 'session': '366122_20240101', 'injection_day_index': 1}
     """
 
     injections: Iterable[npc_shields.types.Injection]
