@@ -355,7 +355,9 @@ class InjectionWidget(ipw.VBox):
                 self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
                 
     def _apply_previous_injection_values(self) -> None:
-        latest_injection: npc_shields.types.Injection | None = max(self.injections, key=lambda x: x.start_time, default=None)
+        if not self.injections:
+            return None
+        latest_injection: npc_shields.types.Injection = max(self.injections, key=lambda x: x.start_time)
         latest_injection_data = latest_injection.to_json() if latest_injection else {}
         for name in self.text_entry_boxes:
             value = latest_injection_data.get(name)
