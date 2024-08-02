@@ -286,8 +286,9 @@ class InjectionWidget(ipw.VBox):
             if name not in ("shield")
         }
         self._apply_default_injection_values()
+        self._apply_previous_injection_values()
         self.text_entry_grid = ipw.GridBox(
-            [v for v in self.text_entry_boxes.values()],
+            list(self.text_entry_boxes.values()),
         )
         hbox_elements = [self.text_entry_grid]
         if self.shield:
@@ -299,6 +300,7 @@ class InjectionWidget(ipw.VBox):
                 )
             )
         hbox = ipw.HBox(hbox_elements)
+        self.vbox_kwargs = vbox_kwargs
 
         self.add_injection_button = ipw.Button(
             description="Add this injection",
@@ -307,6 +309,15 @@ class InjectionWidget(ipw.VBox):
             tooltip="Append the current set of parameters as a unique injection for this session",
         )
         self.add_injection_button.on_click(lambda _: self.add_injection())
+
+        self.add_reset_button = ipw.Button(
+            description="Reset form",
+            button_style="warning",
+            layout=ipw.Layout(width="30%"),
+            tooltip="Clear all data entered in fields and reset to default values",
+        )
+        self.add_reset_button.on_click(lambda _: self._apply_default_injection_values())
+        
         self.console = ipw.Output()
 
         if self.injections:
@@ -314,7 +325,8 @@ class InjectionWidget(ipw.VBox):
                 print(
                     f"Loaded existing injections [total: {len(self.injections)} injections]"
                 )
-        super().__init__([hbox, self.add_injection_button, self.console], **vbox_kwargs)
+
+        super().__init__([hbox, self.add_injection_button, self.add_reset_button, self.console], **vbox_kwargs)
 
     @property
     def save_paths(self) -> tuple[pathlib.Path, ...]:
@@ -341,6 +353,15 @@ class InjectionWidget(ipw.VBox):
                 self.text_entry_boxes[name].value = ""
             else:
                 self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
+                
+    def _apply_previous_injection_values(self) -> None:
+        latest_injection: npc_shields.types.Injection | None = max(self.injections, key=lambda x: x.start_time, default=None)
+        latest_injection_data = latest_injection.to_json() if latest_injection else {}
+        for name in self.text_entry_boxes:
+            value = latest_injection_data.get(name)
+            if value is not None:
+                self.text_entry_boxes[name].value = str(value)
+            
 
     def add_injection(self) -> None:
         try:
