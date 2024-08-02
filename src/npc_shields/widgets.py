@@ -317,7 +317,7 @@ class InjectionWidget(ipw.VBox):
             tooltip="Clear all data entered in fields and reset to default values",
         )
         self.add_reset_button.on_click(lambda _: self._apply_default_injection_values())
-        
+
         self.console = ipw.Output()
 
         if self.injections:
@@ -326,7 +326,10 @@ class InjectionWidget(ipw.VBox):
                     f"Loaded existing injections [total: {len(self.injections)} injections]"
                 )
 
-        super().__init__([hbox, self.add_injection_button, self.add_reset_button, self.console], **vbox_kwargs)
+        super().__init__(
+            [hbox, self.add_injection_button, self.add_reset_button, self.console],
+            **vbox_kwargs,
+        )
 
     @property
     def save_paths(self) -> tuple[pathlib.Path, ...]:
@@ -353,17 +356,18 @@ class InjectionWidget(ipw.VBox):
                 self.text_entry_boxes[name].value = ""
             else:
                 self.text_entry_boxes[name].value = str(getattr(field, "default", ""))
-                
+
     def _apply_previous_injection_values(self) -> None:
         if not self.injections:
             return None
-        latest_injection: npc_shields.types.Injection = max(self.injections, key=lambda x: x.start_time)
+        latest_injection: npc_shields.types.Injection = max(
+            self.injections, key=lambda x: x.start_time
+        )
         latest_injection_data = latest_injection.to_json() if latest_injection else {}
         for name in self.text_entry_boxes:
             value = latest_injection_data.get(name)
             if value is not None:
                 self.text_entry_boxes[name].value = str(value)
-            
 
     def add_injection(self) -> None:
         try:

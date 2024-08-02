@@ -107,7 +107,7 @@ class Injection(pydantic.BaseModel):
 
     settle_time_s: float | None = None
     """Time waited after injection before changing depth, in seconds."""
-    
+
     pipette_inner_diameter_um: float | None = None
     """Inner diameter of the pipette used for the injection, in microns."""
 
@@ -116,7 +116,7 @@ class Injection(pydantic.BaseModel):
 
     is_control: bool
     """Whether the purpose of the injection was a control."""
-    
+
     is_mixed_correctly: bool | None = None
     """An early batch of muscimol may not have been mixed correctly"""
 
