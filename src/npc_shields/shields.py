@@ -171,6 +171,14 @@ DR2011 = Shield(
 )
 """DR2011 vis ctx and striatum - MPE drawing 0283-200-11"""
 
+DR2011 = Shield(
+    name="2014",
+    drawing_id="0283-200-14",
+    drawing_svg=DRAWINGS_DIR / "2014.svg",
+    hole_coordinates_csv=COORDINATES_DIR / "2014.csv",
+)
+"""DR2014 dual hemisphere - MPE drawing 0283-200-14"""
+
 
 def get_svg_data_with_insertions(
     shield: npc_shields.types.Shield,
