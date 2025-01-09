@@ -1,6 +1,6 @@
 [project]
 name = "npc_shields"
-version = "0.1.13"
+version = "0.1.14"
 description = "Tools for Neuropixels probe insertion: providing suggested targets, recording actual insertions, storing notes."
 authors = [
     { name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org" },
