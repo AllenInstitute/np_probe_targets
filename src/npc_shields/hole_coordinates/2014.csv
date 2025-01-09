@@ -1,4 +1,4 @@
-Hole,Target,AP,ML
+﻿Hole,Target,AP,ML
 A3,LH ORB,2.55,1.0
 A4,RH ORB,2.55,-1.0
 B1,LH ALM,2.5,2.15
@@ -16,20 +16,3 @@ F1,LH VISp,-3.6,2.3
 F2,RH VISp,-3.6,-2.3
 F3,LH SC,-3.5,0.9
 F4,RH SC,-3.5,-0.9
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
