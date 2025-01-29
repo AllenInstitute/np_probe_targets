@@ -9,7 +9,12 @@
 
 Tools for Neuropixels probe insertion into SHIELD implants: providing suggested targets, recording actual insertions, storing notes.
 
-## creating new implant drawings
+## Insertion record widget
+The main purpose of this repository is to provide a notebook widget for recording the locations of probe insertions during an ecephys experiment:  
+![image](https://github.com/user-attachments/assets/554e0ecb-1376-4c30-a981-e64796d379d4)
+
+
+## Creating new implant drawings
 ### export 2D view of 3D model
 - get a .sldpart CAD model from MPE
 - open in Solidworks
